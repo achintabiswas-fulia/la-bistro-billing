@@ -115,6 +115,8 @@ body,.app,header,.controls,.tabs,.layout,.menu-panel,.cart,
 <script src="lb-manager.js"></script>
 <script src="lb-cloud.js"></script>
 <script src="lb-menu.js"></script>
+
+<script src="lb-save-fix.js"></script>
 </body></html>`
 }
 function printReceipt(){if(!Object.keys(cart).length){alert('Add items first / আগে আইটেম যোগ করুন');return}const w=window.open('','_blank');w.document.write(receiptHtml());w.document.close();w.focus();setTimeout(()=>w.print(),300)}
@@ -168,4 +170,6 @@ renderTabs();renderMenu();renderCart();
 <script src="lb-manager.js"></script>
 <script src="lb-cloud.js"></script>
 <script src="lb-menu.js"></script>
+
+<script src="lb-save-fix.js"></script>
 </body></html>
