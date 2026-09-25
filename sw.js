@@ -1,4 +1,4 @@
-const CACHE='la-bistro-billing-v25';
+const CACHE='la-bistro-billing-v26';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-repair-v3.js','./lb-sales-fix.js'];
 
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
@@ -14,7 +14,7 @@ function readBill(){
   rows.forEach(r=>{
     const en=(r.querySelector('.cart-name')?.textContent||'').trim();
     const bn=(r.querySelector('.cart-bn')?.textContent||'').trim();
-    const qtxt=r.querySelector('.bill-qty')?.textContent||r.querySelector('.row-controls span')?.textContent||'';
+    const qtxt=r.querySelector('.bill-qty')?.textContent||r.querySelector('.row-controls b')?.textContent||r.querySelector('.row-controls span')?.textContent||'';
     const qty=Math.max(0,parseInt(String(qtxt).replace(/[^0-9]/g,''),10)||0);
     const tt=r.querySelector('.bill-total')?.textContent||r.querySelector('.amount')?.textContent||'';
     const line=n(tt);
@@ -29,7 +29,7 @@ function readBill(){
   const taxable=Math.max(0,subtotal-discount);
   const tax=taxable*rate/100;
   const total=taxable+tax;
-  const payment=(document.querySelector('.payment.active')?.textContent||'Cash').replace(/\\s+/g,' ').trim().split('/')[0].trim();
+  const payment=(document.querySelector('.payment.active')?.textContent||'Cash').replace(/\s+/g,' ').trim().split('/')[0].trim();
   return {customer:val('customer','Customer'),phone:val('customerPhone',''),table:val('table','-'),orderType:val('orderType','Dine In'),payment,items,subtotal,discountPct:pct,discount,taxRate:rate,tax,total};
 }
 function saveFromVisibleBill(){
@@ -57,11 +57,11 @@ window.printReceipt=async function(){
 window.sendWhatsAppBill=async function(){
   const s=saveFromVisibleBill();
   if(!s)return;
-  let p=String(s.phone||'').replace(/\\D/g,'');
+  let p=String(s.phone||'').replace(/\D/g,'');
   if(p.length===10)p='91'+p;
   if(p.length<10){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');return;}
-  const lines=(s.items||[]).map(x=>'• '+(x.en||x.bn||'Item')+' x '+x.qty+' = ₹'+Number(x.qty*x.price).toFixed(0)).join('\\n');
-  const msg='LA BISTRO\\nলা বিস্ট্রো\\n\\nBill: '+s.id+'\\nCustomer: '+(s.customer||'Customer')+'\\n\\n'+lines+'\\n\\nSubtotal: ₹'+Number(s.subtotal||0).toFixed(0)+'\\nDiscount: -₹'+Number(s.discount||0).toFixed(0)+'\\nGST: ₹'+Number(s.tax||0).toFixed(0)+'\\nTOTAL: ₹'+Number(s.total||0).toFixed(0)+'\\n\\nThank you / ধন্যবাদ';
+  const lines=(s.items||[]).map(x=>'• '+(x.en||x.bn||'Item')+' x '+x.qty+' = ₹'+Number(x.qty*x.price).toFixed(0)).join('\n');
+  const msg='LA BISTRO\nলা বিস্ট্রো\n\nBill: '+s.id+'\nCustomer: '+(s.customer||'Customer')+'\n\n'+lines+'\n\nSubtotal: ₹'+Number(s.subtotal||0).toFixed(0)+'\nDiscount: -₹'+Number(s.discount||0).toFixed(0)+'\nGST: ₹'+Number(s.tax||0).toFixed(0)+'\nTOTAL: ₹'+Number(s.total||0).toFixed(0)+'\n\nThank you / ধন্যবাদ';
   window.open('https://wa.me/'+p+'?text='+encodeURIComponent(msg),'_blank');
 };
 window.bluetoothPrinter=function(){
@@ -70,7 +70,7 @@ window.bluetoothPrinter=function(){
 };
 function wire(){document.addEventListener('click',function(e){
   const b=e.target.closest('button,a,.btn');if(!b)return;
-  const t=(b.textContent||'').replace(/\\s+/g,' ').trim().toLowerCase();
+  const t=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
   if(t.includes('print bill')||t.includes('print & save')||t==='print'||t.startsWith('print /')){e.preventDefault();e.stopImmediatePropagation();window.printReceipt();return;}
   if(t.includes('whatsapp')){e.preventDefault();e.stopImmediatePropagation();window.sendWhatsAppBill();return;}
   if(t.includes('bluetooth')){e.preventDefault();e.stopImmediatePropagation();window.bluetoothPrinter();return;}
