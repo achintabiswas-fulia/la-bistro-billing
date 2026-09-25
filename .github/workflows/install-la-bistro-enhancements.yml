@@ -1,0 +1,40 @@
+name: Install La Bistro enhancements
+
+on:
+  push:
+    paths:
+      - 'lb-install-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Inject enhancement scripts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          tags = [
+            '<script src="lb-core.js"></script>',
+            '<script src="lb-manager.js"></script>',
+            '<script src="lb-cloud.js"></script>',
+            '<script src="lb-menu.js"></script>'
+          ]
+          missing = [t for t in tags if t not in text]
+          if missing:
+              text = text.replace('</body>', '\n' + '\n'.join(missing) + '\n</body>')
+              p.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit injected scripts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Enable La Bistro billing enhancements'
+          git push
