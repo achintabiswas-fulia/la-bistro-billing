@@ -1,28 +1,17 @@
-const CACHE='la-bistro-billing-v9';
+const CACHE='la-bistro-billing-v10';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js'];
-const READABLE_CSS=`<style id="lb-readable-fix-v9">
-/* ONLY fix the top black buttons. Do not change the menu layout or menu item boxes. */
+const READABLE_CSS=`<style id="lb-readable-fix-v10">
+/* Keep the top controls readable. */
 .top-actions .btn,.top-actions button,#newBillBtn,#logoBtn,#printBtn{
-  background:#17130b!important;
-  background-image:none!important;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  text-shadow:none!important;
-  border:1px solid #d9a62e!important;
-  font-weight:800!important;
+  background:#17130b!important;background-image:none!important;color:#fff!important;
+  -webkit-text-fill-color:#fff!important;text-shadow:none!important;
+  border:1px solid #d9a62e!important;font-weight:800!important;
 }
-/* Keep primary action buttons readable without changing their layout. */
 .btn.primary{color:#111!important;-webkit-text-fill-color:#111!important}
-/* GST stays white with dark readable text. */
 #gst,#gstInput,input[name="gst"],input.gst,.summary input,.summary select{
-  background:#fff!important;
-  color:#111!important;
-  -webkit-text-fill-color:#111!important;
-  caret-color:#111!important;
-  border:1px solid #999!important;
-  font-weight:700!important;
+  background:#fff!important;color:#111!important;-webkit-text-fill-color:#111!important;
+  caret-color:#111!important;border:1px solid #999!important;font-weight:700!important;
 }
-/* Preserve tappable menu items exactly as they are. */
 .item{cursor:pointer!important;touch-action:manipulation!important;-webkit-tap-highlight-color:rgba(217,166,46,.25)!important}
 </style>`;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
