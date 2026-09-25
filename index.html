@@ -110,7 +110,12 @@ body,.app,header,.controls,.tabs,.layout,.menu-panel,.cart,
 .item .price { font-size:14px !important; font-weight:800 !important; color:#111 !important; }
 .category-title { font-size:21px !important; font-weight:800 !important; color:#111 !important; }
 .tab { font-size:14px !important; font-weight:800 !important; color:#111 !important; }
-</style></head><body><h2>LA BISTRO</h2><div class="c">লা বিস্ট্রো<br>Multi Cuisine Family Restaurant<br>Prafullanagar, Belemath, Nadia<br>7811838548</div><hr><div class="c">${document.getElementById('orderType').value} • Table: ${document.getElementById('table').value||'-'}</div><table><thead><tr><th>Qty<br>পরিমাণ</th><th>Item / আইটেম</th><th>Price<br>দাম</th><th>Total<br>মোট</th></tr></thead><tbody>${rows}</tbody></table><p class="r">Subtotal / মোট: ₹${sub.toFixed(0)}<br>Discount / ছাড়: ₹${dis.toFixed(0)}<br>GST / জিএসটি: ₹${tax.toFixed(0)}<br><span class="t">TOTAL / সর্বমোট: ₹${total.toFixed(0)}</span></p><div class="c">Payment / পেমেন্ট: ${payment}<br><br>Thank You / ধন্যবাদ<br>Make a smile in every bite</div></body></html>`
+</style></head><body><h2>LA BISTRO</h2><div class="c">লা বিস্ট্রো<br>Multi Cuisine Family Restaurant<br>Prafullanagar, Belemath, Nadia<br>7811838548</div><hr><div class="c">${document.getElementById('orderType').value} • Table: ${document.getElementById('table').value||'-'}</div><table><thead><tr><th>Qty<br>পরিমাণ</th><th>Item / আইটেম</th><th>Price<br>দাম</th><th>Total<br>মোট</th></tr></thead><tbody>${rows}</tbody></table><p class="r">Subtotal / মোট: ₹${sub.toFixed(0)}<br>Discount / ছাড়: ₹${dis.toFixed(0)}<br>GST / জিএসটি: ₹${tax.toFixed(0)}<br><span class="t">TOTAL / সর্বমোট: ₹${total.toFixed(0)}</span></p><div class="c">Payment / পেমেন্ট: ${payment}<br><br>Thank You / ধন্যবাদ<br>Make a smile in every bite</div>
+<script src="lb-core.js"></script>
+<script src="lb-manager.js"></script>
+<script src="lb-cloud.js"></script>
+<script src="lb-menu.js"></script>
+</body></html>`
 }
 function printReceipt(){if(!Object.keys(cart).length){alert('Add items first / আগে আইটেম যোগ করুন');return}const w=window.open('','_blank');w.document.write(receiptHtml());w.document.close();w.focus();setTimeout(()=>w.print(),300)}
 function sendWhatsAppBill(){
@@ -158,4 +163,9 @@ function changeLogo(event){
 }
 
 renderTabs();renderMenu();renderCart();
-</script></body></html>
+</script>
+<script src="lb-core.js"></script>
+<script src="lb-manager.js"></script>
+<script src="lb-cloud.js"></script>
+<script src="lb-menu.js"></script>
+</body></html>
