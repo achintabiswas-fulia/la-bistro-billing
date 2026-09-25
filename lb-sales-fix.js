@@ -1,0 +1,9 @@
+/* La Bistro — save once, count once, offer one WhatsApp copy */
+(()=>{'use strict';
+function digits(v){return String(v||'').replace(/\D/g,'')}
+function saleFingerprint(){try{return JSON.stringify({cart:window.cart||{},discount:document.getElementById('lbDiscountPct')?.value||0,gst:document.getElementById('gst')?.value||0,customer:document.getElementById('customer')?.value||'',phone:document.getElementById('customerPhone')?.value||'',table:document.getElementById('table')?.value||'',orderType:document.getElementById('orderType')?.value||'',payment:window.payment||'Cash'})}catch(e){return String(Date.now())}}
+function whatsapp(s){if(!s||!s.phone)return;let p=digits(s.phone);if(p.length===10)p='91'+p;if(p.length<10)return;let lines=(s.items||[]).map(x=>`• ${x.en||x.bn||'Item'} x ${x.qty} = ₹${Number(x.qty*x.price).toFixed(0)}`);let msg=`LA BISTRO\nলা বিস্ট্রো\n\nBill: ${s.id}\nDate: ${new Date(s.at).toLocaleString('en-IN')}\nCustomer: ${s.customer||'Customer'}\n\n${lines.join('\n')}\n\nSubtotal: ₹${Number(s.subtotal||0).toFixed(0)}\nDiscount (${s.discountPct||0}%): -₹${Number(s.discount||0).toFixed(0)}\nGST (${s.taxRate||0}%): ₹${Number(s.tax||0).toFixed(0)}\nTOTAL: ₹${Number(s.total||0).toFixed(0)}\n\nThank you for visiting La Bistro 🙏`;
+window.open('https://wa.me/'+p+'?text='+encodeURIComponent(msg),'_blank')}
+function install(){if(!window.LB||!LB.saveSale)return setTimeout(install,500);if(LB.__saleFixInstalled)return;LB.__saleFixInstalled=true;const original=LB.saveSale;LB.saveSale=async function(print){const fp=saleFingerprint();if(window.__lbLastSaleFingerprint===fp&&window.__lbLastSale){if(print)LB.print(window.__lbLastSale);whatsapp(window.__lbLastSale);return}await original(print);const a=LB.sales||[];const s=a[a.length-1];if(s){window.__lbLastSaleFingerprint=fp;window.__lbLastSale=s;whatsapp(s)}}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else setTimeout(install,300);
+})();
