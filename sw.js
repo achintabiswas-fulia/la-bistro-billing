@@ -1,5 +1,5 @@
-const CACHE='la-bistro-billing-v18';
-const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-repair-v3.js'];
+const CACHE='la-bistro-billing-v19';
+const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-repair-v3.js','./lb-sales-fix.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 function cleanAccidentalCode(html){
@@ -14,7 +14,7 @@ window.printReceipt=function(){const b=getBill();if(!b.lines.length){alert('Add 
 window.bluetoothPrinter=async function(){if(!navigator.bluetooth){alert('Bluetooth printing is not supported by this browser. Please use Print / প্রিন্ট.');return;}try{const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});if(device){alert('Bluetooth device selected: '+(device.name||'Unnamed device')+'\\nFor a thermal printer, pair it in Android Bluetooth settings and use Print / প্রিন্ট for the bill.');}}catch(e){if(e&&e.name!=='NotFoundError')alert('Bluetooth could not be opened. Please check Bluetooth permission.');}};
 function wire(){clean(document.body);document.addEventListener('click',function(e){const b=e.target.closest('button,a,.btn');if(!b)return;const t=(b.textContent||'').replace(/\\s+/g,' ').trim().toLowerCase();if(t.includes('whatsapp')){e.preventDefault();e.stopPropagation();window.sendWhatsAppBill();}else if(t.includes('bluetooth')){e.preventDefault();e.stopPropagation();window.bluetoothPrinter();}else if(t==='print' || t.startsWith('print /') || t.includes('print bill')){if(t.includes('print bill')){e.preventDefault();e.stopPropagation();window.printReceipt();}}},true);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-})();<\\/script>`;
+})();<\\/script><script src="./lb-sales-fix.js?v=19" defer></script>`;
  return html.replace(/<\\/body>/i,injection+'</body>');
 }
 self.addEventListener('fetch',e=>{
