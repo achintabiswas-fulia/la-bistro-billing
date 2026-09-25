@@ -1,4 +1,4 @@
-const CACHE='la-bistro-billing-v21';
+const CACHE='la-bistro-billing-v22';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-repair-v3.js','./lb-sales-fix.js'];
 
 self.addEventListener('install',e=>e.waitUntil(
@@ -14,11 +14,13 @@ return `<script>
 function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
 function val(id, fallback){ const e=document.getElementById(id); return e && e.value!=null && e.value!=='' ? e.value : fallback; }
 function getItems(){
-  const c=window.cart||{}; const out=[];
-  Object.keys(c).forEach(k=>{
-    const x=c[k]; if(!x||!x.item)return;
-    const q=Math.max(0,num(x.qty)||1), p=num(x.item[2]);
-    out.push({en:x.item[0]||'Item',bn:x.item[1]||'',price:p,qty:q});
+  const rows=[...document.querySelectorAll('#cartItems .cart-row')]; const out=[];
+  rows.forEach(row=>{
+    const en=(row.querySelector('.cart-name')?.textContent||'').trim();
+    const bn=(row.querySelector('.cart-bn')?.textContent||'').trim();
+    const qty=Math.max(0,num(row.querySelector('.bill-qty')?.textContent)||0);
+    const price=num((row.querySelector('.bill-price')?.textContent||'').replace(/[^0-9.]/g,''));
+    if(en && qty>0) out.push({en,bn,price,qty});
   });
   return out;
 }
@@ -33,7 +35,7 @@ function buildSale(){
   const taxable=Math.max(0,subtotal-discount);
   const tax=taxable*rate/100;
   const total=taxable+tax;
-  const payment=(typeof window.payment==='string'&&window.payment)?window.payment:'Cash';
+  const payment=(document.querySelector('.payment.active')?.textContent||'Cash').replace(/\s+/g,' ').trim().split('/')[0].trim();
   const sale={
     id:'LB-'+Date.now().toString(36).toUpperCase(),
     at:new Date().toISOString(),
