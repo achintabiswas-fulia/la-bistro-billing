@@ -1,29 +1,117 @@
-const CACHE='la-bistro-billing-v20';
+const CACHE='la-bistro-billing-v21';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-repair-v3.js','./lb-sales-fix.js'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-function cleanAccidentalCode(html){
- const injection=`<style id="lb-dark-button-fix">.print-actions .btn:not(.primary){background:#f2c75c!important;color:#111!important;border-color:#d9a62e!important;}</style><script>(function(){
-function clean(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const a=[];let n;while(n=w.nextNode())a.push(n);a.forEach(n=>{const p=n.parentElement;if(!p||p.tagName==='SCRIPT'||p.tagName==='STYLE')return;const s=n.nodeValue||'';if(s.includes('function printReceipt()')||s.includes('function sendWhatsAppBill()')||s.includes('function bluetoothPrinter()'))n.remove();});}
-function money(n){return Number(n||0).toFixed(0);}
-function getCart(){try{return window.cart&&typeof window.cart==='object'?window.cart:{};}catch(e){return {};}}
-function getBill(){const cart=getCart();const keys=Object.keys(cart);let sub=0;let lines=[];let items=[];keys.forEach(k=>{const x=cart[k];if(!x||!x.item)return;const it=x.item;const q=Number(x.qty||1);const price=Number(it[2]||0);sub+=q*price;items.push({en:it[0]||'Item',bn:it[1]||'',price:price,qty:q});lines.push((it[0]||it[1]||'Item')+' x '+q+' = Rs '+money(q*price));});const disPct=Number((document.getElementById('lbDiscountPct')||{}).value||0);const dis=Number((document.getElementById('discount')||{}).value||0)||sub*disPct/100;const rate=Number((document.getElementById('gst')||{}).value||0);const taxable=Math.max(0,sub-dis);const tax=taxable*rate/100;return {cart,items,lines,sub,dis,disPct,tax,rate,total:taxable+tax};}
-function field(id,fallback){const e=document.getElementById(id);return e&&e.value?e.value:fallback;}
-function saveSaleForPrint(){const b=getBill();if(!b.items.length){alert('Add items first / আগে আইটেম যোগ করুন');return null;}const m={customer:field('customer','Customer'),phone:field('customerPhone',''),table:field('table','-'),orderType:field('orderType','Dine In'),payment:(typeof payment!=='undefined'?payment:'Cash')||'Cash'};const signature=JSON.stringify({items:b.items,customer:m.customer,phone:m.phone,table:m.table,orderType:m.orderType,payment:m.payment,dis:b.dis,rate:b.rate});const last=localStorage.getItem('lb_last_print_signature');let sales=[];try{sales=JSON.parse(localStorage.getItem('lb_sales_v2')||'[]')}catch(e){};if(signature===last){const oldId=localStorage.getItem('lb_last_print_id')||'';if(window.LB&&oldId&&!window.LB.sales.some(x=>x.id===oldId)){window.LB.sales=sales;}return {id:oldId,at:new Date().toISOString(),...m,items:b.items,subtotal:b.sub,discountPct:b.disPct,discount:b.dis,taxRate:b.rate,tax:b.tax,total:b.total,duplicate:true};}const s={id:'LB-'+Date.now().toString(36).toUpperCase(),at:new Date().toISOString(),...m,items:b.items,subtotal:b.sub,discountPct:b.disPct,discount:b.dis,taxRate:b.rate,tax:b.tax,total:b.total};sales.push(s);localStorage.setItem('lb_sales_v2',JSON.stringify(sales));if(window.LB)window.LB.sales=sales;localStorage.setItem('lb_last_print_signature',signature);localStorage.setItem('lb_last_print_id',s.id);return s;}
-window.sendWhatsAppBill=function(){const b=getBill();if(!b.lines.length){alert('Add items first / আগে আইটেম যোগ করুন');return;}let phone=field('customerPhone','').replace(/\\D/g,'');if(phone.length===10)phone='91'+phone;if(phone.length<10){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');const e=document.getElementById('customerPhone');if(e)e.focus();return;}const customer=field('customer','Customer');const table=field('table','-');const order=field('orderType','Dine-in / ডাইন-ইন');let msg='LA BISTRO\\nলা বিস্ট্রো\\nMulti Cuisine Family Restaurant\\nPrafullanagar, Belemath, Nadia\\nContact: 7811838548\\n\\nCustomer: '+customer+'\\nOrder: '+order+'\\nTable: '+table+'\\n\\nBILL\\n';b.lines.forEach(x=>msg+='• '+x+'\\n');msg+='\\nSubtotal: Rs '+money(b.sub)+'\\nDiscount: Rs '+money(b.dis)+'\\nGST: Rs '+money(b.tax)+'\\nTOTAL: Rs '+money(b.total)+'\\n\\nThank you / ধন্যবাদ\\nMake a smile in every bite';window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');};
-window.printReceipt=function(){const s=saveSaleForPrint();if(!s)return;window.print();};
-window.bluetoothPrinter=async function(){if(!navigator.bluetooth){alert('Bluetooth printing is not supported by this browser. Please use Print / প্রিন্ট.');return;}try{const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true});if(device){alert('Bluetooth device selected: '+(device.name||'Unnamed device')+'\\nFor a thermal printer, pair it in Android Bluetooth settings and use Print / প্রিন্ট for the bill.');}}catch(e){if(e&&e.name!=='NotFoundError')alert('Bluetooth could not be opened. Please check Bluetooth permission.');}};
-function wire(){clean(document.body);document.addEventListener('click',function(e){const b=e.target.closest('button,a,.btn');if(!b)return;const t=(b.textContent||'').replace(/\\s+/g,' ').trim().toLowerCase();if(t.includes('whatsapp')){e.preventDefault();e.stopImmediatePropagation();window.sendWhatsAppBill();}else if(t.includes('bluetooth')){e.preventDefault();e.stopImmediatePropagation();window.bluetoothPrinter();}else if(t.includes('print bill')||t==='print'||t.startsWith('print /')||t.includes('print & save')){e.preventDefault();e.stopImmediatePropagation();window.printReceipt();}},true);}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-})();<\\/script><script src="./lb-sales-fix.js?v=20" defer></script>`;
- return html.replace(/<\\/body>/i,injection+'</body>');
+
+self.addEventListener('install',e=>e.waitUntil(
+  caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
+));
+self.addEventListener('activate',e=>e.waitUntil(
+  caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())
+));
+
+function injection(){
+return `<script>
+(()=>{ 'use strict';
+function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+function val(id, fallback){ const e=document.getElementById(id); return e && e.value!=null && e.value!=='' ? e.value : fallback; }
+function getItems(){
+  const c=window.cart||{}; const out=[];
+  Object.keys(c).forEach(k=>{
+    const x=c[k]; if(!x||!x.item)return;
+    const q=Math.max(0,num(x.qty)||1), p=num(x.item[2]);
+    out.push({en:x.item[0]||'Item',bn:x.item[1]||'',price:p,qty:q});
+  });
+  return out;
 }
+function buildSale(){
+  const items=getItems();
+  if(!items.length){ alert('Add items first / আগে আইটেম যোগ করুন'); return null; }
+  const subtotal=items.reduce((s,x)=>s+x.qty*x.price,0);
+  const pct=Math.max(0,Math.min(100,num(val('lbDiscountPct',0))));
+  const oldDiscount=num(val('discount',0));
+  const discount=pct?subtotal*pct/100:oldDiscount;
+  const rate=num(val('gst',0));
+  const taxable=Math.max(0,subtotal-discount);
+  const tax=taxable*rate/100;
+  const total=taxable+tax;
+  const payment=(typeof window.payment==='string'&&window.payment)?window.payment:'Cash';
+  const sale={
+    id:'LB-'+Date.now().toString(36).toUpperCase(),
+    at:new Date().toISOString(),
+    customer:val('customer','Customer'),
+    phone:val('customerPhone',''),
+    table:val('table','-'),
+    orderType:val('orderType','Dine In'),
+    payment,items,subtotal,discountPct:pct,discount,taxRate:rate,tax,total
+  };
+  let sales=[]; try{sales=JSON.parse(localStorage.getItem('lb_sales_v2')||'[]')}catch(e){}
+  const sig=JSON.stringify({customer:sale.customer,phone:sale.phone,table:sale.table,orderType:sale.orderType,payment:sale.payment,items,subtotal,discountPct:pct,discount,taxRate:rate,tax,total});
+  const lastSig=localStorage.getItem('lb_last_print_signature_v2');
+  const lastId=localStorage.getItem('lb_last_print_id_v2');
+  if(sig===lastSig && lastId){
+    const old=sales.find(x=>x.id===lastId);
+    if(old)return old;
+  }
+  sale._sig=sig; sales.push(sale);
+  localStorage.setItem('lb_sales_v2',JSON.stringify(sales));
+  localStorage.setItem('lb_last_print_signature_v2',sig);
+  localStorage.setItem('lb_last_print_id_v2',sale.id);
+  if(window.LB) window.LB.sales=sales;
+  return sale;
+}
+function esc(s){return String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));}
+function money(n){return '₹'+num(n).toFixed(0);}
+function printSale(s){
+  const rows=s.items.map(x=>'<tr><td>'+x.qty+'</td><td>'+esc(x.en)+'<br><small>'+esc(x.bn)+'</small></td><td style="text-align:right">'+money(x.qty*x.price)+'</td></tr>').join('');
+  const html='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(s.id)+'</title><style>body{font:12px Arial,sans-serif;color:#000;width:72mm;margin:0 auto;padding:4mm}h2{text-align:center;margin:0 0 5px}table{width:100%;border-collapse:collapse}td{padding:4px 0;border-bottom:1px dotted #999;vertical-align:top}.right{text-align:right}.big{font-size:16px;font-weight:700}.center{text-align:center}</style></head><body><h2>LA BISTRO</h2><div class="center">লা বিস্ট্রো<br>'+esc(s.orderType)+' • '+esc(s.table)+'<br>'+new Date(s.at).toLocaleString('en-IN')+'<br>'+esc(s.id)+'</div><hr><table>'+rows+'</table><hr><div class="right">Subtotal: '+money(s.subtotal)+'<br>Discount ('+num(s.discountPct)+'%): -'+money(s.discount)+'<br>GST ('+num(s.taxRate)+'%): '+money(s.tax)+'<br><span class="big">TOTAL: '+money(s.total)+'</span></div><p>Customer: '+esc(s.customer)+'<br>Payment: '+esc(s.payment)+'</p><div class="center">Thank you / ধন্যবাদ</div><script>window.onload=function(){setTimeout(function(){window.print()},150)}<\/script></body></html>';
+  const w=window.open('','_blank');
+  if(!w){alert('Allow pop-ups for this site to print the bill.');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+}
+window.printReceipt=function(){
+  const s=buildSale(); if(s) printSale(s);
+};
+window.sendWhatsAppBill=function(){
+  const s=buildSale(); if(!s)return;
+  let p=String(s.phone||'').replace(/\D/g,''); if(p.length===10)p='91'+p;
+  if(p.length<10){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');return;}
+  const lines=s.items.map(x=>'• '+(x.en||x.bn||'Item')+' x '+x.qty+' = '+money(x.qty*x.price)).join('\n');
+  const msg='LA BISTRO\nলা বিস্ট্রো\n\nBill: '+s.id+'\nCustomer: '+(s.customer||'Customer')+'\n\n'+lines+'\n\nSubtotal: '+money(s.subtotal)+'\nDiscount: -'+money(s.discount)+'\nGST: '+money(s.tax)+'\nTOTAL: '+money(s.total)+'\n\nThank you / ধন্যবাদ';
+  window.open('https://wa.me/'+p+'?text='+encodeURIComponent(msg),'_blank');
+};
+window.bluetoothPrinter=function(){
+  if(!navigator.bluetooth){alert('Bluetooth printing is not supported in this browser.');return;}
+  navigator.bluetooth.requestDevice({acceptAllDevices:true}).catch(e=>{if(e&&e.name!=='NotFoundError')alert('Bluetooth could not be opened.');});
+};
+function wire(){
+  document.addEventListener('click',function(e){
+    const b=e.target.closest('button,a,.btn'); if(!b)return;
+    const t=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    if(t.includes('print bill')||t.includes('print & save')||t==='print'||t.startsWith('print /')){
+      e.preventDefault(); e.stopImmediatePropagation(); window.printReceipt(); return;
+    }
+    if(t.includes('whatsapp')){
+      e.preventDefault(); e.stopImmediatePropagation(); window.sendWhatsAppBill(); return;
+    }
+    if(t.includes('bluetooth')){
+      e.preventDefault(); e.stopImmediatePropagation(); window.bluetoothPrinter(); return;
+    }
+  },true);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
+<\/script>`;
+}
+
 self.addEventListener('fetch',e=>{
- if(e.request.method!=='GET')return;
- const u=new URL(e.request.url);
- if(u.pathname.endsWith('/index.html')||u.pathname.endsWith('/')){
-   e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>r.text().then(t=>new Response(cleanAccidentalCode(t),{status:r.status,statusText:r.statusText,headers:r.headers}))).catch(()=>caches.match(e.request)));
- }else{
-   e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
- }
+  if(e.request.method!=='GET')return;
+  const u=new URL(e.request.url);
+  if(u.pathname.endsWith('/index.html')||u.pathname.endsWith('/')){
+    e.respondWith(
+      fetch(e.request,{cache:'no-store'}).then(r=>r.text().then(t=>{
+        return new Response(t.replace(/<\/body>/i,injection()+'</body>'),{status:r.status,statusText:r.statusText,headers:r.headers});
+      })).catch(()=>caches.match(e.request))
+    );
+  }else{
+    e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+  }
 });
