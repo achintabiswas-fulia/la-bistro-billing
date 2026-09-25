@@ -24,7 +24,8 @@ jobs:
             '<script src="lb-core.js"></script>',
             '<script src="lb-manager.js"></script>',
             '<script src="lb-cloud.js"></script>',
-            '<script src="lb-menu.js"></script>'
+            '<script src="lb-menu.js"></script>',
+            '<script src="lb-save-fix.js"></script>'
           ]
           missing = [t for t in tags if t not in text]
           if missing:
@@ -36,5 +37,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Enable La Bistro billing enhancements'
+          git diff --cached --quiet || git commit -m 'Enable reliable La Bistro bill saving'
           git push
