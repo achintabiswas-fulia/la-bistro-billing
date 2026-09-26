@@ -1,16 +1,30 @@
-/* La Bistro Billing — shared cloud sync. Only completed Print/WhatsApp bills are added as sales. */
-(()=>{'use strict';const B=window.LB;
-const DEFAULT_CLOUD={url:'https://hzlnqiojekckaywjyhcy.supabase.co',key:'sb_publishable_vf-fqMTFr9vOnWH3kFllIA_57h1jEnl',store:'la-bistro'};
-const configured=()=>!!(B?.cloud?.url&&B?.cloud?.key);
-const headers=()=>({apikey:B.cloud.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'});
-const base=()=>B.cloud.url.replace(/\/$/,'')+'/rest/v1/';
-const salesEndpoint=()=>base()+'la_bistro_sales';
-const storeEndpoint=()=>base()+'la_bistro_store';
-const mergeSales=(a,b)=>{const m=new Map();[...(a||[]),...(b||[])].forEach(s=>{if(s?.id)m.set(String(s.id),s)});return [...m.values()].sort((x,y)=>String(x.at||'').localeCompare(String(y.at||'')))};
-async function getRemoteSales(){if(!configured())return [];const r=await fetch(salesEndpoint()+'?store_id=eq.'+encodeURIComponent(B.cloud.store||'la-bistro')+'&order=created_at.asc',{headers:headers(),cache:'no-store'});if(!r.ok)throw Error(await r.text());return(await r.json()).map(x=>x.sale).filter(Boolean)}
-async function pushSales(){if(!configured())return false;try{const local=Array.isArray(B.sales)?B.sales:[];const remote=await getRemoteSales();const all=mergeSales(remote,local);if(all.length){const rows=all.map(s=>({id:String(s.id),store_id:B.cloud.store||'la-bistro',sale:s,created_at:s.at||new Date().toISOString()}));const r=await fetch(salesEndpoint()+'?on_conflict=id',{method:'POST',headers:headers(),body:JSON.stringify(rows)});if(!r.ok)throw Error(await r.text())}B.sales=all;B.save('lb_sales_v2',all);return true}catch(e){console.error(e);B.toast?.('Bill was not saved');return false}}
-async function pullSales(){try{const all=await getRemoteSales();if(all.length){B.sales=mergeSales(B.sales,all);B.save('lb_sales_v2',B.sales);window.renderSales?.();window.renderReports?.();window.renderCart?.()}return true}catch(e){console.error(e);return false}}
-window.lbCloudPush=pushSales;window.lbCloudPull=pullSales;
-function install(){if(window.__lbFinalSaveOnly)return;window.__lbFinalSaveOnly=true;document.addEventListener('click',async e=>{const el=e.target.closest('button,a,.btn');if(!el)return;const label=(el.textContent||el.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim().toLowerCase();if(!label.includes('print')&&!label.includes('whatsapp'))return;setTimeout(async()=>{await pushSales();setTimeout(()=>{window.renderSales?.();window.renderReports?.()},100)},100)},true)}
-window.addEventListener('load',()=>setTimeout(async()=>{B.cloud=DEFAULT_CLOUD;B.save('lb_cloud_v2',B.cloud);if(configured()){await pullSales();setInterval(pullSales,15000)}install()},1200));
+/* La Bistro Billing — completed bill cloud sync. */
+(()=>{'use strict';
+const B=window.LB;if(!B)return;
+const CLOUD={url:'https://hzlnqiojekckaywjyhcy.supabase.co',key:'sb_publishable_vf-fqMTFr9vOnWH3kFllIA_57h1jEnl',store:'la-bistro'};B.cloud=CLOUD;
+const ep=()=>CLOUD.url+'/rest/v1/la_bistro_sales';
+const hd=()=>({apikey:CLOUD.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'});
+const num=v=>Number(v)||0;
+const money=v=>Math.round(num(v)*100)/100;
+function billNow(){
+ const cart=B.cart||window.cart||{};const ks=Object.keys(cart);if(!ks.length)return null;
+ const items=ks.map(k=>{const x=cart[k]||{};return {id:k,name:x.name||k,bn:x.bn||x.bengali||'',price:num(x.price),qty:num(x.qty)} }).filter(x=>x.qty>0);
+ if(!items.length)return null;
+ items.forEach(x=>x.total=money(x.price*x.qty));
+ const subtotal=money(items.reduce((a,x)=>a+x.total,0));
+ const dEl=document.querySelector('#discount, #discountPercent, #discountInput');
+ const gEl=document.querySelector('#gst, #gstPercent, #gstInput');
+ const discountPct=num(dEl?.value),gstPct=num(gEl?.value);
+ const discount=money(subtotal*discountPct/100),gst=money((subtotal-discount)*gstPct/100),total=money(subtotal-discount+gst);
+ const phone=(document.getElementById('customerPhone')?.value||'').trim();
+ return {id:'LB-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),at:new Date().toISOString(),items,subtotal,discountPct,discount,gstPct,gst,total,payment:B.payment||B.paymentMethod||'Cash',customerPhone:phone};
+}
+function merge(a,b){const m=new Map();[...(a||[]),...(b||[])].forEach(x=>{if(x?.id)m.set(String(x.id),x)});return [...m.values()].sort((x,y)=>String(x.at||'').localeCompare(String(y.at||'')))}
+async function remote(){const r=await fetch(ep()+'?store_id=eq.'+encodeURIComponent(CLOUD.store)+'&order=created_at.asc',{headers:hd(),cache:'no-store'});if(!r.ok)throw Error(await r.text());return (await r.json()).map(x=>x.sale).filter(Boolean)}
+async function saveBill(s){B.sales=merge(B.sales||[],[s]);B.save?.('lb_sales_v2',B.sales);const r=await fetch(ep()+'?on_conflict=id',{method:'POST',headers:hd(),body:JSON.stringify([{id:s.id,store_id:CLOUD.store,sale:s,created_at:s.at}])});if(!r.ok)throw Error(await r.text());window.renderSales?.();window.renderReports?.();}
+async function pull(){try{B.sales=merge(B.sales||[],await remote());B.save?.('lb_sales_v2',B.sales);window.renderSales?.();window.renderReports?.();}catch(e){console.error('Cloud sales sync:',e)}}
+window.lbCloudPull=pull;
+let installed=false;
+function install(){if(installed)return;installed=true;document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)return;const t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();if(!t.includes('print bill')&&!t.includes('whatsapp bill'))return;const s=billNow();if(s)saveBill(s).catch(err=>console.error('Bill save:',err));},true)}
+window.addEventListener('load',()=>setTimeout(()=>{install();pull();setInterval(pull,15000)},1200));
 })();
