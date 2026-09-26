@@ -4,7 +4,7 @@
 */
 (()=>{
 'use strict';
-const CLOUD_URL='https://hzlnqiojekckaywjyhcy.supabase.co';
+const CLOUD_URL='https://hzlnqiojekckawjyhcy.supabase.co';
 const CLOUD_KEY='sb_publishable_vf-fqMTFr9vOnWH3kFllIA_57h1jEnl';
 const STORE_ID='la-bistro';
 let finalBusy=false;
@@ -128,4 +128,21 @@ function wire(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(wire,100));else setTimeout(wire,100);
 window.addEventListener('load',()=>setTimeout(wire,500));
+
+/* Hide the accidental source-code text rendered below the app. This does not touch app controls. */
+function hideAccidentalSourceText(){
+  const root=document.body;
+  if(!root)return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const remove=[];
+  let n;
+  while(n=walker.nextNode()){
+    const t=(n.nodeValue||'');
+    if(t.includes('function printReceipt(){') || t.includes('function sendWhatsAppBill(){') || t.includes('const keys=Object.keys(cart)')) remove.push(n);
+  }
+  remove.forEach(x=>x.parentNode?.removeChild(x));
+}
+const sourceObserver=new MutationObserver(hideAccidentalSourceText);
+if(document.body) sourceObserver.observe(document.body,{childList:true,subtree:true});
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',hideAccidentalSourceText); else setTimeout(hideAccidentalSourceText,0);
 })();
