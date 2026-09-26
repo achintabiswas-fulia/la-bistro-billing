@@ -19,19 +19,24 @@ function currentValues(){
     orderType:(document.getElementById('orderType')?.value||'Dine In').trim(),
     payment:window.payment||'Cash'};
 }
+function itemValues(x){
+  if(x?.item) return {en:String(x.item?.[0]||''),bn:String(x.item?.[1]||''),price:Number(x.item?.[2]||0),qty:Number(x.qty||0)};
+  return {en:String(x?.en||x?.name||''),bn:String(x?.bn||''),price:Number(x?.price||0),qty:Number(x?.qty||0)};
+}
 function sameItems(a,b){
   if(!a||!b||a.length!==b.length)return false;
-  return a.every(x=>{const y=b.find(z=>z.item?.[0]===x.en&&z.item?.[1]===x.bn&&Number(z.item?.[2])===Number(x.price));return y&&Number(y.qty)===Number(x.qty)})
+  const aa=a.map(itemValues), bb=b.map(itemValues);
+  return aa.every(x=>bb.some(y=>y.en===x.en&&y.bn===x.bn&&Number(y.price)===Number(x.price)&&Number(y.qty)===Number(x.qty)));
 }
 function findSavedSale(v){
   const now=Date.now();
-  return [...(LB.sales||[])].reverse().find(s=>
-    now-Date.parse(s.at||0)<15000 &&
+  const sales=[...(LB.sales||[])].reverse();
+  return sales.find(s=>now-Date.parse(s.at||0)<30000 &&
     Number(s.total)===Number(v.total) &&
     String(s.customer||'')===v.customer &&
     String(s.phone||'')===v.phone &&
     sameItems(v.items,s.items)
-  ) || [...(LB.sales||[])].reverse().find(s=>Number(s.total)===Number(v.total)&&sameItems(v.items,s.items));
+  ) || sales.find(s=>Number(s.total)===Number(v.total)&&sameItems(v.items,s.items));
 }
 function clearCurrentBill(){
   window.cart={};
@@ -50,11 +55,10 @@ async function finalize(printMode){
   if(!Object.keys(window.cart||{}).length){alert('Add items first / আগে আইটেম যোগ করুন');return}
   if(!LB||typeof LB.saveSale!=='function'){alert('Billing system is still loading. Please refresh once.');return}
   const v=currentValues();
-  const before=LB.sales.length;
   const ok=await LB.saveSale(false);
-  if(ok===false)return;
+  if(ok===false){LB.toast?.('Bill was not saved. Please try again.');return}
   const s=findSavedSale(v);
-  if(!s){alert('Bill was not saved. Please try again.');return}
+  if(!s){alert('Bill was saved, but could not be found locally. Please refresh and check Today\'s Sales.');return}
   if(printMode){
     const w=window.open('','_blank');
     if(!w){alert('Please allow pop-ups for printing. The bill is already saved.');return}
@@ -74,15 +78,8 @@ async function finalize(printMode){
 }
 window.printReceipt=()=>finalize(true);
 window.sendWhatsAppBill=()=>finalize(false);
-
-// The previous broken index.html accidentally displayed the old function source as page text.
-// Remove only that stray source text; do not change the locked billing UI/formula.
 function removeStraySource(){
-  try{
-    [...document.body.childNodes].forEach(n=>{
-      if(n.nodeType===3 && /function\s+printReceipt|function\s+sendWhatsAppBill|window\.open\('https:\/\/wa\.me/.test(n.nodeValue||''))n.remove();
-    });
-  }catch(e){}
+  try{[...document.body.childNodes].forEach(n=>{if(n.nodeType===3&&/function\s+printReceipt|function\s+sendWhatsAppBill|window\.open\('https:\/\/wa\.me/.test(n.nodeValue||''))n.remove()})}catch(e){}
 }
 window.addEventListener('load',()=>setTimeout(removeStraySource,50));
 })();
