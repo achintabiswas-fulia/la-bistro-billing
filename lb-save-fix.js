@@ -20,6 +20,7 @@ function makeSale(){
  sales.push(sale); localStorage.setItem('lb_sales_v2',JSON.stringify(sales));
  localStorage.setItem('lb_last_saved_bill',sale.id);
  if(window.LB)window.LB.sales=sales;
+ if(window.lbCloudPush)window.lbCloudPush();
  return sale;
 }
 function doPrint(s){if(window.LB&&typeof window.LB.print==='function'){window.LB.print(s);return}alert('Bill saved: '+s.id+' / বিল সেভ হয়েছে')}
