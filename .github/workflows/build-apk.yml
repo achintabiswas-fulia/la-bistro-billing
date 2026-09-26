@@ -38,7 +38,7 @@ jobs:
           unzip -q gradle.zip
 
       - name: Build debug APK
-        run: ./gradle-8.10.2/bin/gradle --no-daemon --stacktrace :app:assembleDebug
+        run: ../gradle-8.10.2/bin/gradle --no-daemon --stacktrace :app:assembleDebug
         working-directory: android
 
       - name: Upload APK
