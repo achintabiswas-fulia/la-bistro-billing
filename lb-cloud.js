@@ -1,6 +1,6 @@
 /* La Bistro Billing — shared cloud sales sync + final bill handling */
 (()=>{'use strict';const B=window.LB;
-const DEFAULT_CLOUD={url:'https://hzlnqiojekckcaywjyhcy.supabase.co',key:'sb_publishable_vf-fqMTFr9vOnWH3kFllIA_57h1jEnl',store:'la-bistro'};
+const DEFAULT_CLOUD={url:'https://hzlnqiojekckaywjyhcy.supabase.co',key:'sb_publishable_vf-fqMTFr9vOnWH3kFllIA_57h1jEnl',store:'la-bistro'};
 function configured(){return !!(B?.cloud?.url&&B?.cloud?.key)}
 function headers(){return{apikey:B.cloud.key,Authorization:'Bearer '+B.cloud.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'}}
 function endpoint(){return B.cloud.url.replace(/\/$/,'')+'/rest/v1/la_bistro_store'}
