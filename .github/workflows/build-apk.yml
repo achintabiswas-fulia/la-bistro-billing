@@ -1,0 +1,36 @@
+name: Build La Bistro APK
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Install Gradle
+        run: |
+          curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.10.2-bin.zip
+          unzip -q gradle.zip
+      - name: Build debug APK
+        run: ./gradle-8.10.2/bin/gradle --no-daemon --stacktrace :app:assembleDebug
+        working-directory: android
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: La-Bistro-Billing-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
