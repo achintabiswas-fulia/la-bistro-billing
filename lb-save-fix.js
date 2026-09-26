@@ -11,10 +11,12 @@ let finalBusy=false;
 
 function getCart(){
   try{
+    const fresh=window.__freshCart;
+    if(fresh && Object.keys(fresh).length) return fresh;
     if(typeof cart!=='undefined' && cart && Object.keys(cart).length) return cart;
   }catch(e){}
   if(window.cart && Object.keys(window.cart).length) return window.cart;
-  return {};
+  return window.__freshCart||{};
 }
 function getItems(){
   const c=getCart();
@@ -28,14 +30,18 @@ function currentSale(){
   const items=getItems();
   if(!items.length)return null;
   const subtotal=items.reduce((s,x)=>s+x.price*x.qty,0);
-  let discountPct=num('lbDiscountPct',0);
+  const fresh=!!(window.__freshCart&&Object.keys(window.__freshCart).length);
+  let discountPct=num(fresh?'freshDiscount':'lbDiscountPct',0);
   if(!discountPct) discountPct=num('discount',0);
   const discount=Math.min(subtotal,subtotal*discountPct/100);
-  const gst=num('gst',0);
+  const gst=num(fresh?'freshGst':'gst',0);
   const tax=Math.max(0,subtotal-discount)*gst/100;
   const total=Math.max(0,subtotal-discount)+tax;
   let payment='Cash';
-  try{payment=String(window.payment||document.querySelector('.payment.active')?.textContent||'Cash').split('/')[0].trim()||'Cash'}catch(e){}
+  try{
+    if(fresh) payment=document.querySelector('.fresh-pay.active')?.dataset.pay||'Cash';
+    else payment=String(window.payment||document.querySelector('.payment.active')?.textContent||'Cash').split('/')[0].trim()||'Cash';
+  }catch(e){}
   const customer=(document.getElementById('customer')?.value||'Customer').trim()||'Customer';
   const phone=(document.getElementById('customerPhone')?.value||'').trim();
   const table=(document.getElementById('table')?.value||'-').trim()||'-';
@@ -95,9 +101,7 @@ async function finalize(mode,button){
   finalBusy=true;
   if(button)button.disabled=true;
   try{
-    // Save locally immediately so Today Sales updates on this device.
     localAdd(s);
-    // Then save the SAME bill ID to Supabase so all 10 phones receive it.
     await cloudAdd(s);
     if(mode==='print')printSaved(s);else if(!whatsappSaved(s)){finalBusy=false;if(button)button.disabled=false;return}
     clearCurrentBill();
@@ -115,7 +119,6 @@ function wire(){
   window.sendWhatsAppBill=()=>finalize('whatsapp',document.querySelector('#lbWhatsApp')||null);
   const p=document.getElementById('lbPrint');if(p){p.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();finalize('print',p)}}
   const w=document.getElementById('lbWhatsApp');if(w){w.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();finalize('whatsapp',w)}}
-  // Also catch the visible Current Bill buttons by their text, without touching Save Sale.
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;
     const t=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
