@@ -39,9 +39,14 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    el.dataset.lbBusy='1';e.preventDefault();e.stopImmediatePropagation();
    const s=await saveCurrentImmediately();
    if(!s){alert('Add items first / আগে আইটেম যোগ করুন');el.dataset.lbBusy='';return}
-   // Use the app's original tested print/WhatsApp functions while the cart is intact.
-   if(isPrint){if(typeof window.printReceipt==='function')window.printReceipt();}
-   else {if(typeof window.sendWhatsAppBill==='function')window.sendWhatsAppBill();}
+   // Print or WhatsApp directly from the saved bill object so the original cart handlers cannot reject it.
+   let ok=true;
+   if(isPrint){
+     if(typeof B.print==='function')B.print(s);else{ok=false;alert('Printer function is not available. The bill is already saved.');}
+   }else{
+     ok=sendWhatsApp(s);
+   }
+   // The bill is already in Today's Sales before the action above. Clear only after final action is triggered.
    clearBill();
    B.toast?.('Bill saved to Today\'s Sales / বিল আজকের বিক্রয়ে সেভ হয়েছে');
    setTimeout(()=>{el.dataset.lbBusy='';},1200);
