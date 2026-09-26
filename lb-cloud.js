@@ -11,9 +11,10 @@ async function push(){const local=Array.isArray(B.sales)?B.sales:[];return pushR
 async function pull(){try{B.sales=merge(B.sales||[],await remote());B.save?.('lb_sales_v2',B.sales);window.renderSales?.();window.renderReports?.();return true}catch(e){console.error('Cloud sales sync:',e);return false}}
 window.lbCloudPush=async()=>{try{await push();return true}catch(e){console.error('Cloud push:',e);return false}};
 window.lbCloudPull=pull;
+function getCart(){try{return (typeof cart!=='undefined'&&cart)?cart:(window.cart||{})}catch(e){return window.cart||{}}}
 function buildSale(){
- const cart=window.cart||{};const keys=Object.keys(cart);if(!keys.length)return null;
- const items=keys.map(k=>{const x=cart[k]||{};const it=x.item||[];return {en:String(it[0]||''),bn:String(it[1]||''),price:Number(it[2]||0),qty:Number(x.qty||0)}}).filter(x=>x.qty>0);
+ const c=getCart();const keys=Object.keys(c);if(!keys.length)return null;
+ const items=keys.map(k=>{const x=c[k]||{};const it=x.item||[];return {en:String(it[0]||''),bn:String(it[1]||''),price:Number(it[2]||0),qty:Number(x.qty||0)}}).filter(x=>x.qty>0);
  if(!items.length)return null;
  const subtotal=items.reduce((s,x)=>s+x.qty*x.price,0);
  const dp=Math.max(0,Math.min(100,Number(document.getElementById('lbDiscountPct')?.value||0)));
@@ -25,12 +26,11 @@ function buildSale(){
 }
 function localSave(s){B.sales=Array.isArray(B.sales)?B.sales:[];B.sales.push(s);B.save?.('lb_sales_v2',B.sales);window.renderSales?.();window.renderReports?.()}
 async function saveCurrentImmediately(){const s=buildSale();if(!s)return null;localSave(s);try{await pushRows([{id:String(s.id),store_id:CLOUD.store,sale:s,created_at:s.at}])}catch(e){console.error('Cloud save failed; local bill is saved:',e)}return s}
-function clearBill(){window.cart={};try{document.getElementById('discount').value=0}catch(e){}try{document.getElementById('gst').value=0}catch(e){}try{document.getElementById('lbDiscountPct').value=0}catch(e){}window.renderMenu?.();window.renderCart?.()}
+function clearBill(){try{if(typeof cart!=='undefined'){for(const k of Object.keys(cart))delete cart[k]}}catch(e){window.cart={}};try{document.getElementById('discount').value=0}catch(e){}try{document.getElementById('gst').value=0}catch(e){}try{document.getElementById('lbDiscountPct').value=0}catch(e){}window.renderMenu?.();window.renderCart?.()}
 function sendWhatsApp(s){let phone=String(s.phone||'').replace(/\D/g,'');if(phone.startsWith('0'))phone=phone.slice(1);if(phone.length===10)phone='91'+phone;if(phone.length<12){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');return false}const lines=(s.items||[]).map(x=>`• ${x.en} / ${x.bn} × ${x.qty} = ${B.money(x.qty*x.price)}`).join('\n');const msg=`LA BISTRO\nলা বিস্ট্রো\nMulti Cuisine Family Restaurant\nPrafullanagar, Belemath, Nadia\nContact: 7811838548\n\nCustomer: ${s.customer||'Customer'}\nBill: ${s.id}\nOrder: ${s.orderType}\nTable: ${s.table}\n\n${lines}\n\nSubtotal: ${B.money(s.subtotal)}\nDiscount (${Number(s.discountPct||0)}%): -${B.money(s.discount)}\nGST (${Number(s.taxRate||0)}%): ${B.money(s.tax)}\nTOTAL: ${B.money(s.total)}\nPayment: ${s.payment}\n\nThank you / ধন্যবাদ`;const w=window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');if(!w){alert('Please allow pop-ups to open WhatsApp. The bill is already saved.');return false}return true}
 window.addEventListener('load',()=>setTimeout(async()=>{
  await pull();setInterval(pull,15000);
- // PRINT BILL / WHATSAPP BILL are the only final-save actions. Capture them,
- // save the current cart first, then perform the requested action. No duplicate save.
+ // ONLY PRINT BILL / WHATSAPP BILL finalize the current bill. Nothing else is changed.
  document.addEventListener('click',async e=>{
    const el=e.target.closest('button');if(!el)return;
    const t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
@@ -39,9 +39,11 @@ window.addEventListener('load',()=>setTimeout(async()=>{
    el.dataset.lbBusy='1';e.preventDefault();e.stopImmediatePropagation();
    const s=await saveCurrentImmediately();
    if(!s){alert('Add items first / আগে আইটেম যোগ করুন');el.dataset.lbBusy='';return}
-   if(isPrint){if(B.print)B.print(s);else if(typeof B.saveSale==='function')B.print(s);}
-   else sendWhatsApp(s);
-   clearBill();B.toast?.('Bill saved to Today\'s Sales / বিল আজকের বিক্রয়ে সেভ হয়েছে');
+   // Use the app's original tested print/WhatsApp functions while the cart is intact.
+   if(isPrint){if(typeof window.printReceipt==='function')window.printReceipt();}
+   else {if(typeof window.sendWhatsAppBill==='function')window.sendWhatsAppBill();}
+   clearBill();
+   B.toast?.('Bill saved to Today\'s Sales / বিল আজকের বিক্রয়ে সেভ হয়েছে');
    setTimeout(()=>{el.dataset.lbBusy='';},1200);
  },true);
 },1200));
