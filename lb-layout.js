@@ -32,7 +32,8 @@
     Array.from(document.body.childNodes).forEach(node=>{if(node.nodeType===Node.TEXT_NODE&&/function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=/.test(node.textContent||''))node.remove()});injectCategoryManager();renderCategories();
   }
   function loadSyncBridge(){if(document.querySelector('script[data-lb-sync-fix]'))return;const s=document.createElement('script');s.src='./lb-sync-fix.js?v=2';s.dataset.lbSyncFix='1';document.head.appendChild(s)}
+  function loadSalesHistory(){if(document.querySelector('script[data-lb-sales-history]'))return;const s=document.createElement('script');s.src='./lb-sales-history.js?v=1';s.dataset.lbSalesHistory='1';document.head.appendChild(s)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyMobileLayout,{once:true});else applyMobileLayout();
-  window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();loadSyncBridge()},300));
+  window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();loadSyncBridge();loadSalesHistory()},300));
   window.lbRenderCategories=renderCategories;
 })();
