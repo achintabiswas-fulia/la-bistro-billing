@@ -36,6 +36,16 @@
       if(phone && phone.parentElement!==box) box.appendChild(phone);
     }
 
+    /* Hide JavaScript source accidentally rendered as plain text by the receipt template. */
+    document.querySelectorAll('body > *').forEach(el => {
+      if(el.tagName === 'SCRIPT') return;
+    });
+    Array.from(document.body.childNodes).forEach(node => {
+      if(node.nodeType !== Node.TEXT_NODE) return;
+      const t=node.textContent || '';
+      if(/function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=/.test(t)) node.remove();
+    });
+
     document.documentElement.dataset.lbLayoutApplied='1';
   }
 
