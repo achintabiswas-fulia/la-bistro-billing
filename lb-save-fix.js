@@ -23,14 +23,22 @@ function snapshotSale(){
  const id='LB-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
  return{id,at:new Date().toISOString(),customer,phone,table,orderType,payment,items,subtotal,discountPct,discount,gst,taxRate:gst,tax,total,_sig:id};
 }
-async function saveLocal(){
- const s=snapshotSale();
- if(!s){alert('Add items first / আগে আইটেম যোগ করুন');return null}
+async function saveLocal(s){
+ if(!s)return null;
  try{
   if(window.LB&&typeof window.LB.saveSale==='function'){
+   const before=Array.isArray(window.LB.sales)?window.LB.sales.length:0;
    try{await window.LB.saveSale(false)}catch(e){console.error(e)}
+   const after=Array.isArray(window.LB.sales)?window.LB.sales.length:before;
+   if(after===before && Array.isArray(window.LB.sales)){
+    const fallback={...s};
+    window.LB.sales.push(fallback);
+    try{window.LB.save('lb_sales_v2',window.LB.sales)}catch(e){try{localStorage.setItem('lb_sales_v2',JSON.stringify(window.LB.sales))}catch(x){console.error(x)}}
+   }
+  }else{
+   const arr=JSON.parse(localStorage.getItem('lb_sales_v2')||'[]');arr.push(s);localStorage.setItem('lb_sales_v2',JSON.stringify(arr));
   }
- }catch(e){console.error(e)}
+ }catch(e){console.error('Local bill save failed',e)}
  return s;
 }
 function sendWhatsApp(s){
@@ -49,12 +57,16 @@ async function finalize(mode,b){
  if(finalBusy)return;
  finalBusy=true;if(b)b.disabled=true;
  try{
-  const s=await saveLocal();
-  if(!s)return;
-  if(mode==='print'){
-   if(window.LB&&typeof window.LB.print==='function')window.LB.print(s);
-   else if(typeof window.printReceipt==='function')window.printReceipt();
-  }else if(mode==='whatsapp')sendWhatsApp(s);
+  const s=snapshotSale();
+  if(!s){alert('Add items first / আগে আইটেম যোগ করুন');return}
+  if(mode==='whatsapp'){
+   await saveLocal(s);
+   sendWhatsApp(s);
+   return;
+  }
+  await saveLocal(s);
+  if(window.LB&&typeof window.LB.print==='function')window.LB.print(s);
+  else if(typeof window.printReceipt==='function')window.printReceipt();
  }catch(e){console.error(e);alert('Action failed. Please try again.')}
  finally{finalBusy=false;if(b)b.disabled=false}
 }
@@ -62,10 +74,11 @@ function wire(){
  window.printReceipt=()=>finalize('print',document.querySelector('#lbPrint'));
  window.sendWhatsAppBill=()=>finalize('whatsapp',document.querySelector('#lbWhatsApp'));
  document.addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  const t=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-  if(t.includes('print bill')||t.includes('বিল প্রিন্ট')){e.preventDefault();e.stopImmediatePropagation();finalize('print',b)}
-  else if(t.includes('whatsapp bill')||t.includes('হোয়াটসঅ্যাপ বিল')){e.preventDefault();e.stopImmediatePropagation();finalize('whatsapp',b)}
+  const el=e.target.closest('button,[role="button"],[onclick]');if(!el)return;
+  const t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+  const oc=(el.getAttribute('onclick')||'').toLowerCase();
+  if(t.includes('print bill')||t.includes('বিল প্রিন্ট')||oc.includes('printreceipt')){e.preventDefault();e.stopImmediatePropagation();finalize('print',el)}
+  else if(t.includes('whatsapp bill')||t.includes('হোয়াটসঅ্যাপ বিল')||oc.includes('sendwhatsappbill')){e.preventDefault();e.stopImmediatePropagation();finalize('whatsapp',el)}
  },true);
 }
 function hideSource(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),a=[];let n;while(n=w.nextNode()){const t=n.nodeValue||'';if(t.includes('function printReceipt(){')||t.includes('function sendWhatsAppBill(){')||t.includes('const keys=Object.keys(cart)'))a.push(n)}a.forEach(x=>x.parentNode?.removeChild(x))}
