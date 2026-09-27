@@ -4,93 +4,15 @@
 let finalBusy=false;
 function getCart(){try{if(typeof cart!=='undefined'&&cart&&Object.keys(cart).length)return cart}catch(e){}try{if(window.__freshCart&&Object.keys(window.__freshCart).length)return window.__freshCart}catch(e){}return window.cart||{}}
 function num(id,f=0){return Math.max(0,Number(document.getElementById(id)?.value||f)||0)}
-function snapshotSale(){
- const c=getCart(),keys=Object.keys(c||{});
- if(!keys.length)return null;
- const items=keys.map(k=>{const x=c[k]||{},i=x.item||[];return{en:String(i[0]||x.en||''),bn:String(i[1]||x.bn||''),price:Number(i[2]??x.price??0),qty:Number(x.qty||0)}}).filter(x=>x.en&&x.qty>0);
- if(!items.length)return null;
- const subtotal=items.reduce((s,x)=>s+x.price*x.qty,0);
- const discountPct=num('lbDiscountPct',0)||num('freshDiscount',0)||num('discount',0);
- const discount=Math.min(subtotal,subtotal*discountPct/100);
- const gst=num('gst',0)||num('freshGst',0);
- const tax=Math.max(0,subtotal-discount)*gst/100;
- const total=Math.max(0,subtotal-discount)+tax;
- let payment='Cash';try{payment=String(window.payment||document.querySelector('.payment.active')?.textContent||document.querySelector('.fresh-pay.active')?.dataset.pay||'Cash').split('/')[0].trim()||'Cash'}catch(e){}
- const customer=(document.getElementById('customer')?.value||'Customer').trim()||'Customer';
- const phone=(document.getElementById('customerPhone')?.value||'').trim();
- const table=(document.getElementById('table')?.value||'-').trim()||'-';
- const orderType=(document.getElementById('orderType')?.value||'Dine In').trim()||'Dine In';
- const id='LB-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
- return{id,at:new Date().toISOString(),customer,phone,table,orderType,payment,items,subtotal,discountPct,discount,gst,taxRate:gst,tax,total,_sig:id};
-}
-async function saveLocal(s){
- if(!s)return null;
- try{
-  if(window.LB&&typeof window.LB.saveSale==='function'){
-   const before=Array.isArray(window.LB.sales)?window.LB.sales.length:0;
-   try{await window.LB.saveSale(false)}catch(e){console.error(e)}
-   const after=Array.isArray(window.LB.sales)?window.LB.sales.length:before;
-   if(after===before && Array.isArray(window.LB.sales)){
-    const fallback={...s};
-    window.LB.sales.push(fallback);
-    try{window.LB.save('lb_sales_v2',window.LB.sales)}catch(e){try{localStorage.setItem('lb_sales_v2',JSON.stringify(window.LB.sales))}catch(x){console.error(x)}}
-   }
-  }else{
-   const arr=JSON.parse(localStorage.getItem('lb_sales_v2')||'[]');arr.push(s);localStorage.setItem('lb_sales_v2',JSON.stringify(arr));
-  }
- }catch(e){console.error('Local bill save failed',e)}
- return s;
-}
-function sendWhatsApp(s){
- let p=String(s.phone||'').replace(/\D/g,'');
- if(p.startsWith('0'))p=p.slice(1);
- if(p.length===10)p='91'+p;
- if(p.length<12){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');document.getElementById('customerPhone')?.focus();return false}
- const lines=s.items.map(x=>`• ${x.en} / ${x.bn} × ${x.qty} = ₹${(x.qty*x.price).toFixed(0)}`).join('\n');
- const msg=`LA BISTRO\nলা বিস্ট্রো\nMulti Cuisine Family Restaurant\nPrafullanagar, Belemath, Nadia\nContact: 7811838548\n\nCustomer: ${s.customer}\nOrder: ${s.orderType}\n\nBILL\n${lines}\n\nSubtotal: ₹${s.subtotal.toFixed(0)}\nDiscount: ₹${s.discount.toFixed(0)}\nGST: ₹${s.tax.toFixed(0)}\nTOTAL: ₹${s.total.toFixed(0)}\nPayment: ${s.payment}\n\nThank you / ধন্যবাদ\nMake a smile in every bite`;
- const url='https://wa.me/'+p+'?text='+encodeURIComponent(msg);
- const w=window.open(url,'_blank');
- if(!w){alert('Please allow pop-ups to open WhatsApp.');return false}
- return true;
-}
-async function finalize(mode,b){
- if(finalBusy)return;
- finalBusy=true;if(b)b.disabled=true;
- try{
-  const s=snapshotSale();
-  if(!s){alert('Add items first / আগে আইটেম যোগ করুন');return}
-  if(mode==='whatsapp'){
-   await saveLocal(s);
-   sendWhatsApp(s);
-   return;
-  }
-  await saveLocal(s);
-  if(window.LB&&typeof window.LB.print==='function')window.LB.print(s);
-  else if(typeof window.printReceipt==='function')window.printReceipt();
- }catch(e){console.error(e);alert('Action failed. Please try again.')}
- finally{finalBusy=false;if(b)b.disabled=false}
-}
-function wire(){
- window.printReceipt=()=>finalize('print',document.querySelector('#lbPrint'));
- window.sendWhatsAppBill=()=>finalize('whatsapp',document.querySelector('#lbWhatsApp'));
- document.addEventListener('click',e=>{
-  const el=e.target.closest('button,[role="button"],[onclick]');if(!el)return;
-  const t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-  const oc=(el.getAttribute('onclick')||'').toLowerCase();
-  if(t.includes('print bill')||t.includes('বিল প্রিন্ট')||oc.includes('printreceipt')){e.preventDefault();e.stopImmediatePropagation();finalize('print',el)}
-  else if(t.includes('whatsapp bill')||t.includes('হোয়াটসঅ্যাপ বিল')||oc.includes('sendwhatsappbill')){e.preventDefault();e.stopImmediatePropagation();finalize('whatsapp',el)}
- },true);
-}
-function hideSource(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),a=[];let n;while(n=w.nextNode()){const t=n.nodeValue||'';if(t.includes('function printReceipt(){')||t.includes('function sendWhatsAppBill(){')||t.includes('const keys=Object.keys(cart)'))a.push(n)}a.forEach(x=>x.parentNode?.removeChild(x))}
-function requestedUiOnly(){
- let st=document.getElementById('lbRequestedUiOnly');if(!st){st=document.createElement('style');st.id='lbRequestedUiOnly';document.head.appendChild(st)}
- st.textContent=`@media(max-width:900px){.top-actions{display:none!important}.brand{display:block!important}.brand h1{font-family:'Arial Black',Arial,sans-serif!important;font-size:21px!important;font-weight:900!important;letter-spacing:.5px!important;color:#ffe600!important;text-shadow:1px 1px 0 #111!important}.brand h1 .brand-red{color:#ff1717!important}.brand div{font-size:12px!important;font-weight:800!important;color:#111!important}.brand .brand-address{font-size:10px!important;font-weight:700!important;color:#111!important}.controls .new-bill,.controls .table-no,.controls [name="table"],.controls [id="table"]{display:none!important}.controls{display:flex!important}.logo{display:block!important;width:54px!important;height:54px!important;flex:0 0 54px!important}.tabs{position:sticky!important;top:0!important;z-index:100!important}.print-actions{display:grid!important}}`;
- const logo=document.querySelector('header .logo');if(logo){logo.style.display='block';logo.style.cursor='pointer';logo.title='Tap to upload/change logo / লোগো আপলোড বা পরিবর্তন করতে ট্যাপ করুন';logo.onclick=openLogoPicker}
- const brand=document.querySelector('header .brand');if(brand){brand.innerHTML='<h1>LA B<span class="brand-red">I</span>STRO</h1><div>Multi Cuisine Family Restaurant</div><div class="brand-address">Prafullanagar, Belemath, Nadia • M: 7811838548</div>'}
- document.querySelectorAll('header button,.top-actions button,.top-actions .btn').forEach(b=>{const t=(b.textContent||'').trim().toLowerCase();if(t.includes('print bill')||t.includes('new bill')||t.includes('table'))b.style.display='none'});
- document.querySelectorAll('.controls input,.controls select,.controls label').forEach(el=>{const t=((el.getAttribute('placeholder')||'')+' '+(el.getAttribute('name')||'')+' '+(el.id||'')+' '+(el.textContent||'')).toLowerCase();if(t.includes('table no')||t.includes('table number')||t==='table'||t.includes('new bill'))el.style.display='none'});
-}
+function snapshotSale(){const c=getCart(),keys=Object.keys(c||{});if(!keys.length)return null;const items=keys.map(k=>{const x=c[k]||{},i=x.item||[];return{en:String(i[0]||x.en||''),bn:String(i[1]||x.bn||''),price:Number(i[2]??x.price??0),qty:Number(x.qty||0)}}).filter(x=>x.en&&x.qty>0);if(!items.length)return null;const subtotal=items.reduce((s,x)=>s+x.price*x.qty,0),discountPct=num('lbDiscountPct',0)||num('freshDiscount',0)||num('discount',0),discount=Math.min(subtotal,subtotal*discountPct/100),gst=num('gst',0)||num('freshGst',0),tax=Math.max(0,subtotal-discount)*gst/100,total=Math.max(0,subtotal-discount)+tax;let payment='Cash';try{payment=String(window.payment||document.querySelector('.payment.active')?.textContent||document.querySelector('.fresh-pay.active')?.dataset.pay||'Cash').split('/')[0].trim()||'Cash'}catch(e){}const customer=(document.getElementById('customer')?.value||'Customer').trim()||'Customer',phone=(document.getElementById('customerPhone')?.value||'').trim(),table=(document.getElementById('table')?.value||'-').trim()||'-',orderType=(document.getElementById('orderType')?.value||'Dine In').trim()||'Dine In',id='LB-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();return{id,at:new Date().toISOString(),customer,phone,table,orderType,payment,items,subtotal,discountPct,discount,gst,taxRate:gst,tax,total,_sig:id}}
+async function saveLocal(s){if(!s)return null;try{if(window.LB&&typeof window.LB.saveSale==='function'){const before=Array.isArray(window.LB.sales)?window.LB.sales.length:0;try{await window.LB.saveSale(false)}catch(e){console.error(e)}const after=Array.isArray(window.LB.sales)?window.LB.sales.length:before;if(after===before&&Array.isArray(window.LB.sales)){window.LB.sales.push({...s});try{window.LB.save('lb_sales_v2',window.LB.sales)}catch(e){try{localStorage.setItem('lb_sales_v2',JSON.stringify(window.LB.sales))}catch(x){console.error(x)}}}}else{const arr=JSON.parse(localStorage.getItem('lb_sales_v2')||'[]');arr.push(s);localStorage.setItem('lb_sales_v2',JSON.stringify(arr))}}catch(e){console.error('Local bill save failed',e)}return s}
+function sendWhatsApp(s){let p=String(s.phone||'').replace(/\D/g,'');if(p.startsWith('0'))p=p.slice(1);if(p.length===10)p='91'+p;if(p.length<12){alert('Enter customer WhatsApp number / কাস্টমারের WhatsApp নম্বর দিন');document.getElementById('customerPhone')?.focus();return false}const lines=s.items.map(x=>`• ${x.en} / ${x.bn} × ${x.qty} = ₹${(x.qty*x.price).toFixed(0)}`).join('\n'),msg=`LA BISTRO\nলা বিস্ট্রো\nMulti Cuisine Family Restaurant\nPrafullanagar, Belemath, Nadia\nContact: 7811838548\n\nCustomer: ${s.customer}\nPhone: ${s.phone}\nOrder: ${s.orderType}\n\nBILL\n${lines}\n\nSubtotal: ₹${s.subtotal.toFixed(0)}\nDiscount: ₹${s.discount.toFixed(0)}\nGST: ₹${s.tax.toFixed(0)}\nTOTAL: ₹${s.total.toFixed(0)}\nPayment: ${s.payment}\n\nThank you / ধন্যবাদ\nMake a smile in every bite`,w=window.open('https://wa.me/'+p+'?text='+encodeURIComponent(msg),'_blank');if(!w){alert('Please allow pop-ups to open WhatsApp.');return false}return true}
+async function finalize(mode,b){if(finalBusy)return;finalBusy=true;if(b)b.disabled=true;try{const s=snapshotSale();if(!s){alert('Add items first / আগে আইটেম যোগ করুন');return}await saveLocal(s);if(mode==='whatsapp'){sendWhatsApp(s);return}if(window.LB&&typeof window.LB.print==='function')window.LB.print(s);else if(typeof window.printReceipt==='function')window.printReceipt()}catch(e){console.error(e);alert('Action failed. Please try again.')}finally{finalBusy=false;if(b)b.disabled=false}}
+function wire(){window.printReceipt=()=>finalize('print',document.querySelector('#lbPrint'));window.sendWhatsAppBill=()=>finalize('whatsapp',document.querySelector('#lbWhatsApp'));document.addEventListener('click',e=>{const el=e.target.closest('button,[role="button"],[onclick]');if(!el)return;const t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase(),oc=(el.getAttribute('onclick')||'').toLowerCase();if(t.includes('print bill')||t.includes('বিল প্রিন্ট')||oc.includes('printreceipt')){e.preventDefault();e.stopImmediatePropagation();finalize('print',el)}else if(t.includes('whatsapp bill')||t.includes('হোয়াটসঅ্যাপ বিল')||oc.includes('sendwhatsappbill')){e.preventDefault();e.stopImmediatePropagation();finalize('whatsapp',el)}},true)}
+function requestedUiOnly(){let st=document.getElementById('lbRequestedUiOnly');if(!st){st=document.createElement('style');st.id='lbRequestedUiOnly';document.head.appendChild(st)}st.textContent=`@media(max-width:900px){.top-actions{display:none!important}.brand{display:block!important}.brand h1{font-family:'Arial Black',Arial,sans-serif!important;font-size:21px!important;font-weight:900!important;letter-spacing:.5px!important;color:#ffe600!important;text-shadow:1px 1px 0 #111!important}.brand h1 .brand-red{color:#ff1717!important}.brand div{font-size:12px!important;font-weight:800!important;color:#111!important}.brand .brand-address{font-size:10px!important;font-weight:700!important;color:#111!important}.controls .new-bill,.controls .table-no,.controls [name="table"],.controls [id="table"]{display:none!important}.controls{display:flex!important}.logo{display:block!important;width:54px!important;height:54px!important;flex:0 0 54px!important}.tabs{position:sticky!important;top:0!important;z-index:100!important}.print-actions{display:grid!important}}`;const logo=document.querySelector('header .logo');if(logo){logo.style.display='block';logo.style.cursor='pointer';logo.title='Tap to upload/change logo / লোগো আপলোড বা পরিবর্তন করতে ট্যাপ করুন'}const brand=document.querySelector('header .brand');if(brand)brand.innerHTML='<h1>LA B<span class="brand-red">I</span>STRO</h1><div>Multi Cuisine Family Restaurant</div><div class="brand-address">Prafullanagar, Belemath, Nadia • M: 7811838548</div>';document.querySelectorAll('header button,.top-actions button,.top-actions .btn').forEach(b=>{const t=(b.textContent||'').trim().toLowerCase();if(t.includes('print bill')||t.includes('new bill')||t.includes('table'))b.style.display='none'})}
 function openLogoPicker(){let inp=document.getElementById('lbLogoUpload');if(!inp){inp=document.createElement('input');inp.type='file';inp.id='lbLogoUpload';inp.accept='image/*';inp.style.display='none';document.body.appendChild(inp);inp.addEventListener('change',()=>{const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{localStorage.setItem('la_bistro_logo',String(r.result))}catch(e){}const img=document.querySelector('header .logo');if(img)img.src=r.result};r.readAsDataURL(f)})}inp.value='';inp.click()}
 function restoreLogo(){try{const saved=localStorage.getItem('la_bistro_logo');if(saved){const img=document.querySelector('header .logo');if(img)img.src=saved}}catch(e){}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{wire();hideSource();requestedUiOnly();restoreLogo()});else{wire();hideSource();requestedUiOnly();restoreLogo()}window.addEventListener('load',()=>{hideSource();requestedUiOnly();restoreLogo()});
+function patchPrint(){if(!window.LB||typeof window.LB.print!=='function'||window.LB.__customerPrintPatched)return;const old=window.LB.print;window.LB.print=function(s){if(s){s.customer=(s.customer||document.getElementById('customer')?.value||'Customer').trim()||'Customer';s.phone=(s.phone||document.getElementById('customerPhone')?.value||'').trim()}return old(s)};window.LB.__customerPrintPatched=true}
+function start(){wire();requestedUiOnly();restoreLogo();patchPrint();setTimeout(patchPrint,500);setTimeout(patchPrint,1200)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();window.addEventListener('load',start);
 })();
