@@ -1,28 +1,7 @@
-/* La Bistro customer fields — current bill only. Never reuse the previous customer's details. */
-(()=>{'use strict';
-function setup(){
-  const cart=document.querySelector('.cart');
-  if(!cart){setTimeout(setup,300);return}
-  let wrap=document.getElementById('lbCustomerFieldsV3');
-  if(!wrap){
-    wrap=document.createElement('div');
-    wrap.id='lbCustomerFieldsV3';
-    wrap.style.cssText='background:#fff8df;border:1px solid #c8a94e;border-radius:10px;padding:10px;margin:0 0 8px 0;display:flex;gap:7px;flex-wrap:wrap;box-sizing:border-box;width:100%';
-    wrap.innerHTML='<div style="width:100%;font-weight:800;font-size:15px;color:#111;margin-bottom:2px">Customer Details / কাস্টমারের তথ্য</div><input id="customer" type="text" placeholder="Customer Name / কাস্টমারের নাম" autocomplete="name" style="flex:1;min-width:150px;padding:10px;border:1px solid #b8953b;border-radius:8px;background:#fff;color:#111;font-size:15px"><input id="customerPhone" type="tel" inputmode="numeric" placeholder="WhatsApp Number / WhatsApp নম্বর" autocomplete="tel" style="flex:1;min-width:180px;padding:10px;border:1px solid #b8953b;border-radius:8px;background:#fff;color:#111;font-size:15px">';
-    cart.parentNode.insertBefore(wrap,cart);
-  }
-  const name=document.getElementById('customer'),phone=document.getElementById('customerPhone');
-  if(!name||!phone)return;
-  // Do NOT restore any previous customer's details.
-  if(!name.dataset.lbV3Bound){name.dataset.lbV3Bound='1';phone.dataset.lbV3Bound='1';}
-  // Keep fields tied only to the current bill. When a new bill is started, clear them.
-  if(!window.__lbCustomerNewBillWrapped){
-    window.__lbCustomerNewBillWrapped=true;
-    const wait=()=>{if(typeof window.newBill!=='function'){setTimeout(wait,300);return}
-      const original=window.newBill;
-      window.newBill=function(){const r=original.apply(this,arguments);setTimeout(()=>{name.value='';phone.value='';},0);return r};
-    };wait();
-  }
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
-})();
+/* La Bistro customer + WhatsApp v4 — single active customer module. */
+(()=>{'use strict';let wrapped=false;
+function setup(){const cart=document.querySelector('.cart');if(!cart){setTimeout(setup,300);return}let wrap=document.getElementById('lbCustomerFieldsV3');if(!wrap){wrap=document.createElement('div');wrap.id='lbCustomerFieldsV3';wrap.style.cssText='background:#fff8df;border:1px solid #c8a94e;border-radius:10px;padding:10px;margin:0 0 8px;display:flex;gap:7px;flex-wrap:wrap;box-sizing:border-box;width:100%';wrap.innerHTML='<div style="width:100%;font-weight:800;font-size:15px;color:#111">Customer Details / কাস্টমারের তথ্য</div><input id="customer" type="text" placeholder="Customer Name / কাস্টমারের নাম" autocomplete="name" style="flex:1;min-width:150px;padding:10px;border:1px solid #b8953b;border-radius:8px;background:#fff;color:#111;font-size:15px"><input id="customerPhone" type="tel" inputmode="numeric" placeholder="WhatsApp Number / WhatsApp নম্বর" autocomplete="tel" style="flex:1;min-width:180px;padding:10px;border:1px solid #b8953b;border-radius:8px;background:#fff;color:#111;font-size:15px">';cart.parentNode.insertBefore(wrap,cart)}bindNewBill();if(window.LB&&!wrapped&&typeof window.LB.saveSale==='function'){const original=window.LB.saveSale;window.LB.saveSale=async function(print){let popup=null;if(print)popup=window.open('about:blank','lbWhatsAppBill');const ok=await original.call(window.LB,print);if(ok&&print){const s=(window.LB.sales||[]).slice().reverse().find(x=>x&&x.at&&Math.abs(Date.now()-Date.parse(x.at))<30000);if(s&&s.phone){const url=waUrl(s);if(popup&&!popup.closed)popup.location.href=url;else window.open(url,'_blank')}else{if(popup&&!popup.closed)popup.close();window.LB.toast?.('Add WhatsApp number / WhatsApp নম্বর দিন')}}else if(popup&&!popup.closed)popup.close();return ok};wrapped=true}}
+function bindNewBill(){if(window.__lbCustomerNewBillV4)return;const wait=()=>{if(typeof window.newBill!=='function'){setTimeout(wait,300);return}const original=window.newBill;window.newBill=function(){const r=original.apply(this,arguments);setTimeout(clear,0);return r};window.__lbCustomerNewBillV4=true};wait()}
+function clear(){const n=document.getElementById('customer'),p=document.getElementById('customerPhone');if(n)n.value='';if(p)p.value='';try{localStorage.removeItem('lb_last_customer_v1');localStorage.removeItem('lb_last_customer_v2');localStorage.removeItem('lb_last_customer_v3')}catch(e){}}
+function waUrl(s){let p=String(s.phone||'').replace(/\D/g,'');if(p.startsWith('0'))p=p.slice(1);if(p.length===10)p='91'+p;if(p.length<12)throw Error('bad phone');const lines=['LA BISTRO','Multi Cuisine Family Restaurant','Bill: '+s.id,'Date: '+new Date(s.at).toLocaleString('en-IN'),'Customer: '+(s.customer||'Customer'),''];(s.items||[]).forEach(x=>lines.push(`${x.qty} x ${x.en} = ₹${Number(x.qty*x.price).toFixed(0)}`));lines.push('','Subtotal: ₹'+Number(s.subtotal||0).toFixed(0));if(Number(s.discount||0))lines.push('Discount: -₹'+Number(s.discount).toFixed(0));if(Number(s.tax||0))lines.push('GST: ₹'+Number(s.tax).toFixed(0));lines.push('TOTAL: ₹'+Number(s.total||0).toFixed(0),'Payment: '+(s.payment||'Cash'),'Thank you / ধন্যবাদ');return 'https://wa.me/'+p+'?text='+encodeURIComponent(lines.join('\n'))}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();})();
