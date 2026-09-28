@@ -1,21 +1,23 @@
 /* La Bistro — customer details + WhatsApp copy. Existing billing logic is preserved. */
 (()=>{'use strict';
 function setup(){
-  const controls=document.querySelector('.controls');
-  if(!controls || !window.LB){setTimeout(setup,300);return}
-  // Add customer fields only if they are not already present.
-  if(!document.getElementById('customer')){
+  if(!window.LB){setTimeout(setup,300);return}
+  const cart=document.querySelector('.cart');
+  if(!cart){setTimeout(setup,300);return}
+  // Add customer fields directly above Current Bill / বর্তমান বিল.
+  if(!document.getElementById('lbCustomerWrap')){
     const wrap=document.createElement('div');
-    wrap.style.cssText='display:flex;gap:7px;flex-wrap:wrap;width:100%;margin-top:4px';
-    wrap.innerHTML='<input id="customer" type="text" placeholder="Customer Name / কাস্টমারের নাম" autocomplete="name" style="flex:1;min-width:180px;padding:9px;border:1px solid #bbb;border-radius:8px;background:#fff;color:#111"><input id="customerPhone" type="tel" inputmode="numeric" placeholder="WhatsApp Number / WhatsApp নম্বর" autocomplete="tel" style="flex:1;min-width:210px;padding:9px;border:1px solid #bbb;border-radius:8px;background:#fff;color:#111">';
-    controls.appendChild(wrap);
+    wrap.id='lbCustomerWrap';
+    wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap;width:100%;margin:0 0 10px;padding:10px;background:#fffaf0;border:1px solid #c8a94e;border-radius:10px;position:relative;z-index:2;box-sizing:border-box';
+    wrap.innerHTML='<input id="customer" type="text" placeholder="Customer Name / কাস্টমারের নাম" autocomplete="name" style="flex:1;min-width:180px;padding:11px;border:1px solid #bbb;border-radius:8px;background:#fff;color:#111;font-size:15px"><input id="customerPhone" type="tel" inputmode="numeric" placeholder="WhatsApp Number / WhatsApp নম্বর" autocomplete="tel" style="flex:1;min-width:210px;padding:11px;border:1px solid #bbb;border-radius:8px;background:#fff;color:#111;font-size:15px">';
+    cart.insertBefore(wrap,cart.firstElementChild);
   }
-  // Restore fields for the current customer while making a new bill.
   const saved=(()=>{try{return JSON.parse(localStorage.getItem('lb_last_customer_v1')||'{}')}catch(e){return {}}})();
   const name=document.getElementById('customer'), phone=document.getElementById('customerPhone');
   if(name && !name.value && saved.name)name.value=saved.name;
   if(phone && !phone.value && saved.phone)phone.value=saved.phone;
-  if(name)name.addEventListener('input',saveDraft);if(phone)phone.addEventListener('input',saveDraft);
+  if(name && !name.dataset.lbDraftBound){name.dataset.lbDraftBound='1';name.addEventListener('input',saveDraft)}
+  if(phone && !phone.dataset.lbDraftBound){phone.dataset.lbDraftBound='1';phone.addEventListener('input',saveDraft)}
   if(window.LB && !window.__lbCustomerWhatsWrapped){
     window.__lbCustomerWhatsWrapped=true;
     const oldSave=window.LB.saveSale;
