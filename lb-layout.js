@@ -129,6 +129,15 @@ function renderCategories(){
       plus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()+1);};
       controls.onclick=e=>{e.preventDefault();e.stopPropagation();};
 
+      /* HARD BLOCK: custom card itself must never add an item.
+         Only the actual − and + symbol boxes are allowed to change quantity. */
+      card.addEventListener('click',e=>{
+        if(!e.target.closest('.lbCustomMinus,.lbCustomPlus')){
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      },true);
+
       card.append(controls,en,bn,price);
 
       /* Custom item cards are display-only.
@@ -247,7 +256,7 @@ function style(){
 
   const s=document.createElement('style');
   s.id='lb-clean-category-style';
-  s.textContent='#lbCleanCustomHost{display:block;margin:0 0 10px;overflow-anchor:none}.lbCustomSection{margin:0 0 10px;overflow-anchor:none}.lbCustomTab{background:#fff!important;color:#111!important}.lbCustomTab:focus{outline:none}.lbCustomItem{color:#111!important;padding-top:43px!important}.lbCustomImg{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;height:70px!important;object-fit:cover;border-radius:7px;display:block;margin-bottom:5px}.lbCustomQtyControls{position:absolute;left:7px;right:7px;top:7px;height:32px;display:flex;align-items:center;justify-content:space-between;z-index:5;pointer-events:none}.lbCustomQtyControls span,.lbCustomQtyControls b{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border:1px solid #c9a74f;border-radius:7px;background:#fff;color:#111;font-size:20px;line-height:1;cursor:pointer}.lbCustomQtyControls b{min-width:26px;font-size:17px;font-weight:800}';
+  s.textContent='#lbCleanCustomHost{display:block;margin:0 0 10px;overflow-anchor:none}.lbCustomSection{margin:0 0 10px;overflow-anchor:none}.lbCustomTab{background:#fff!important;color:#111!important}.lbCustomTab:focus{outline:none}.lbCustomItem{color:#111!important;padding-top:43px!important}.lbCustomImg{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;height:70px!important;object-fit:cover;border-radius:7px;display:block;margin-bottom:5px}.lbCustomQtyControls{position:absolute;left:7px;right:7px;top:7px;height:32px;display:flex;align-items:center;justify-content:space-between;z-index:5;pointer-events:auto}.lbCustomQtyControls span,.lbCustomQtyControls b{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border:1px solid #c9a74f;border-radius:7px;background:#fff;color:#111;font-size:20px;line-height:1;cursor:pointer}.lbCustomQtyControls b{min-width:26px;font-size:17px;font-weight:800}';
   document.head.appendChild(s);
 }
 
