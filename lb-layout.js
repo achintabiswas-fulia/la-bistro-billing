@@ -1,5 +1,5 @@
 /* La Bistro — CLEAN custom-category fix, based only on V51-SPECIAL-LOCK.
-   Purpose: keep custom categories inside the same menu scroll, directly after the locked base menu. */
+   Purpose: keep custom categories after the locked base menu. */
 (function(){
 'use strict';
 
@@ -30,8 +30,6 @@ function renderCategories(){
 
   let host=document.getElementById('lbCleanCustomHost');
 
-  /* The custom host must live INSIDE menuPanel so mobile menu scrolling
-     continues naturally from the locked base menu into custom categories. */
   if(!host){
     host=document.createElement('div');
     host.id='lbCleanCustomHost';
@@ -44,13 +42,12 @@ function renderCategories(){
   const cats=customCategories();
   const visibleCats=selectedCustomCategory&&cats.includes(selectedCustomCategory)?[selectedCustomCategory]:[];
 
-  /* When a custom category is selected, show ONLY that custom category.
-     The locked base menu stays in the DOM but is temporarily hidden so
-     the user does not see OUR SPECIALS or another base category first. */
   Array.from(menu.children).forEach(child=>{
     if(child!==host) child.style.display=selectedCustomCategory?'none':'';
   });
+
   if(selectedCustomCategory && host.parentNode===menu) menu.insertBefore(host,menu.firstChild);
+
   const signature=JSON.stringify([selectedCustomCategory,cats.map(cat=>[
     cat,
     items.filter(x=>String(x.category||'MY ITEMS / আমার আইটেম').trim()===cat)
@@ -66,6 +63,8 @@ function renderCategories(){
 
   const frag=document.createDocumentFragment();
 
+  /* Show the selected custom category content only.
+     When no custom category is selected, the locked base menu remains visible. */
   visibleCats.forEach(cat=>{
     const section=document.createElement('section');
     section.className='lbCustomSection';
@@ -131,7 +130,15 @@ function renderCategories(){
 
     section.append(title,grid);
     frag.appendChild(section);
+  });
 
+  host.appendChild(frag);
+
+  /* IMPORTANT:
+     Always append custom category tabs AFTER all locked base tabs.
+     This keeps ICE CREAM / আইসক্রিম as the last locked base category,
+     followed by custom categories such as Extra, Cigarette, Cold Drink and My Items. */
+  cats.forEach(cat=>{
     const tab=document.createElement('button');
     tab.type='button';
     tab.className='tab lbCustomTab';
@@ -144,9 +151,6 @@ function renderCategories(){
     tabs.appendChild(tab);
   });
 
-  host.appendChild(frag);
-
-  /* Keep the menu viewport stable when custom content refreshes. */
   menu.scrollTop=oldMenuTop;
 }
 
@@ -250,8 +254,6 @@ function apply(){
   patchCanonicalRenderMenu();
   patchCanonicalRenderTabs();
 
-  /* Cloud/manager code may call either legacy renderer name.
-     Both now use the single clean renderer. */
   window.renderCustomMenuItems=renderCategories;
   window.renderCustomCategories=renderCategories;
 
