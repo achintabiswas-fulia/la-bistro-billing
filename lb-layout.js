@@ -21,6 +21,8 @@ function customCategories(){
   return out;
 }
 
+let selectedCustomCategory=null;
+
 function renderCategories(){
   const menu=document.getElementById('menuPanel');
   const tabs=document.querySelector('.tabs');
@@ -40,11 +42,12 @@ function renderCategories(){
 
   const items=customItems();
   const cats=customCategories();
-  const signature=JSON.stringify(cats.map(cat=>[
+  const visibleCats=selectedCustomCategory&&cats.includes(selectedCustomCategory)?[selectedCustomCategory]:[];
+  const signature=JSON.stringify([selectedCustomCategory,cats.map(cat=>[
     cat,
     items.filter(x=>String(x.category||'MY ITEMS / আমার আইটেম').trim()===cat)
       .map(x=>[x.id,x.en,x.bn,x.price,x.image||''])
-  ]));
+  ])]);
 
   if(host.dataset.signature===signature && host.children.length===cats.length)return;
 
@@ -55,7 +58,7 @@ function renderCategories(){
 
   const frag=document.createDocumentFragment();
 
-  cats.forEach(cat=>{
+  visibleCats.forEach(cat=>{
     const section=document.createElement('section');
     section.className='lbCustomSection';
 
@@ -126,8 +129,9 @@ function renderCategories(){
     tab.className='tab lbCustomTab';
     tab.textContent=cat.split('/')[0].trim();
     tab.onclick=()=>{
-      const y=section.getBoundingClientRect().top+menu.scrollTop-menu.getBoundingClientRect().top-8;
-      menu.scrollTo({top:y,behavior:'smooth'});
+      selectedCustomCategory=cat;
+      renderCategories();
+      menu.scrollTo({top:0,behavior:'smooth'});
     };
     tabs.appendChild(tab);
   });
@@ -146,6 +150,19 @@ function patchCanonicalRenderMenu(){
   window.__lbCleanRenderMenuPatched=true;
 
   window.renderMenu=function(){
+    const result=original.apply(this,arguments);
+    setTimeout(renderCategories,0);
+    return result;
+  };
+}
+
+function patchCanonicalRenderTabs(){
+  if(window.__lbCleanRenderTabsPatched)return;
+  if(typeof window.renderTabs!=='function')return;
+  const original=window.renderTabs;
+  window.__lbCleanRenderTabsPatched=true;
+  window.renderTabs=function(){
+    selectedCustomCategory=null;
     const result=original.apply(this,arguments);
     setTimeout(renderCategories,0);
     return result;
@@ -223,6 +240,7 @@ function apply(){
   style();
   injectManager();
   patchCanonicalRenderMenu();
+  patchCanonicalRenderTabs();
 
   /* Cloud/manager code may call either legacy renderer name.
      Both now use the single clean renderer. */
@@ -242,6 +260,7 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{
     injectManager();
     patchCanonicalRenderMenu();
+    patchCanonicalRenderTabs();
     renderCategories();
     loadExtras();
   },300);
