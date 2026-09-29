@@ -112,6 +112,11 @@ public class MainActivity extends Activity {
                     prefs.edit().putString("printer_mac", d.getAddress()).putString("printer_name", d.getName() == null ? "Bluetooth printer" : d.getName()).apply();
                     toast("Printer saved: " + (d.getName() == null ? d.getAddress() : d.getName()));
                     web.evaluateJavascript("window.onNativePrinterReady&&window.onNativePrinterReady(" + JSONObject.quote(d.getName() == null ? d.getAddress() : d.getName()) + ")", null);
+                    if (pendingPrint != null) {
+                        String p = pendingPrint;
+                        pendingPrint = null;
+                        printWithSavedPrinter(p);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
