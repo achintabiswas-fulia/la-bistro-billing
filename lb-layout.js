@@ -117,35 +117,10 @@ function renderCategories(){
       controls.append(minus,count,plus);
 
       const customKey=()=>String((x.en||'')+'||'+(x.bn||'')+'||'+Number(x.price||0));
-      const getQty=()=>{
-        try{
-          const fresh=window.__freshCart;
-          if(fresh){
-            const row=fresh[customKey()];
-            return Number(row?.qty||0);
-          }
-          return Number(window.lbFreshCustomGetQty?.(x.en||'',x.bn||'',Number(x.price||0))||0);
-        }catch(e){return 0}
-      };
+      const getQty=()=>Number(window.__freshCart?.[customKey()]?.qty||0);
       const setQty=q=>{
         q=Math.max(0,Math.floor(Number(q)||0));
-        try{
-          if(window.__freshCart){
-            const k=customKey();
-            if(q===0) delete window.__freshCart[k];
-            else window.__freshCart[k]={
-              en:String(x.en||''),
-              bn:String(x.bn||''),
-              price:Number(x.price||0),
-              key:k,
-              qty:q
-            };
-            window.renderFreshBill?.();
-            window.dispatchEvent(new CustomEvent('lb-custom-qty-changed'));
-          }else{
-            window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q);
-          }
-        }catch(e){}
+        window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q);
         count.textContent=getQty();
       };
       count.textContent=getQty();
@@ -291,45 +266,8 @@ function loadExtras(){
   }
 }
 
-function installCustomQtyTouchHandler(){
-  if(window.__lbCustomQtyTouchHandler)return;
-  window.__lbCustomQtyTouchHandler=true;
-
-  document.addEventListener('click',function(e){
-    const control=e.target.closest?.('.lbCustomQtyControls');
-    if(!control)return;
-
-    const card=control.closest('.lbCustomItem');
-    if(!card)return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
-    const en=(card.querySelector('.en')?.textContent||'').trim();
-    const bn=(card.querySelector('.bn')?.textContent||'').trim();
-    const price=Number((card.querySelector('.price')?.textContent||'').replace(/[^0-9.]/g,''))||0;
-    const k=en+'||'+bn+'||'+price;
-
-    let q=Number(window.__freshCart?.[k]?.qty||0);
-
-    if(e.target.closest('.lbCustomMinus')) q=Math.max(0,q-1);
-    else if(e.target.closest('.lbCustomPlus')) q=q+1;
-    else return;
-
-    window.__freshCart=window.__freshCart||Object.create(null);
-
-    if(q===0) delete window.__freshCart[k];
-    else window.__freshCart[k]={en,bn,price,key:k,qty:q};
-
-    window.renderFreshBill?.();
-    setTimeout(renderCategories,0);
-  },true);
-}
-
 function apply(){
   style();
-  installCustomQtyTouchHandler();
   injectManager();
   patchCanonicalRenderMenu();
   patchCanonicalRenderTabs();
