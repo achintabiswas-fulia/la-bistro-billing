@@ -79,8 +79,7 @@ function renderCategories(){
     const group=items.filter(x=>String(x.category||'MY ITEMS / আমার আইটেম').trim()===cat);
 
     group.forEach(x=>{
-      const card=document.createElement('button');
-      card.type='button';
+      const card=document.createElement('div');
       card.className='item lbCustomItem';
 
       if(x.image){
@@ -159,10 +158,8 @@ function renderCategories(){
 
       /* Custom item cards are display-only.
          Quantity changes ONLY when the user presses the − or + boxes. */
-      card.onclick=e=>{
-        e.preventDefault();
-        e.stopPropagation();
-      };
+      card.onclick=null;
+      card.setAttribute('role','presentation');
 
       grid.appendChild(card);
     });
