@@ -79,14 +79,19 @@
     allCustomCategories().forEach(cat=>{
       const b=document.createElement('button');
       b.className='tab lbCustomTab';
+      b.style.userSelect='none';
+      b.style.webkitUserSelect='none';
+      b.style.touchAction='manipulation';
       b.type='button';
       b.dataset.category=cat;
       b.textContent=cat.split('/')[0].trim();
       b.onclick=(e)=>{
         e.preventDefault();
         e.stopPropagation();
+        window.__lbSelectedCustomCategory=cat;
         showCustomCategory(cat);
       };
+      b.onpointerdown=(e)=>{ e.stopPropagation(); };
       tabsHost.appendChild(b);
     });
 
