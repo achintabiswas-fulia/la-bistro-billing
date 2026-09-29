@@ -35,5 +35,19 @@
   function loadSalesHistory(){if(document.querySelector('script[data-lb-sales-history]'))return;const s=document.createElement('script');s.src='./lb-sales-history.js?v=1';s.dataset.lbSalesHistory='1';document.head.appendChild(s)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyMobileLayout,{once:true});else applyMobileLayout();
   window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();loadSyncBridge();loadSalesHistory()},300));
+  // Keep custom categories/items visible after every canonical menu render.
+  // This runs only for custom content and never changes the locked base MENU.
+  function hookCanonicalMenu(){
+    if(window.__lbCustomCategoryRenderWrapped||typeof window.renderMenu!=='function')return;
+    const original=window.renderMenu;
+    window.renderMenu=function(){
+      const out=original.apply(this,arguments);
+      setTimeout(renderCategories,0);
+      return out;
+    };
+    window.__lbCustomCategoryRenderWrapped=true;
+  }
+  hookCanonicalMenu();
+  window.addEventListener('lb-cloud-updated',()=>setTimeout(renderCategories,0));
   window.lbRenderCategories=renderCategories;
 })();
