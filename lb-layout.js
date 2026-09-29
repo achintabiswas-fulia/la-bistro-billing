@@ -1,5 +1,5 @@
 /* La Bistro — CLEAN custom-category fix, based only on V51-SPECIAL-LOCK.
-   Purpose: stop custom-category layout from changing the user's viewport. */
+   Purpose: keep custom categories inside the same menu scroll, directly after the locked base menu. */
 (function(){
 'use strict';
 
@@ -27,10 +27,15 @@ function renderCategories(){
   if(!menu||!tabs)return;
 
   let host=document.getElementById('lbCleanCustomHost');
+
+  /* The custom host must live INSIDE menuPanel so mobile menu scrolling
+     continues naturally from the locked base menu into custom categories. */
   if(!host){
     host=document.createElement('div');
     host.id='lbCleanCustomHost';
-    menu.insertAdjacentElement('afterend',host);
+    menu.appendChild(host);
+  }else if(host.parentNode!==menu){
+    menu.appendChild(host);
   }
 
   const items=customItems();
@@ -43,7 +48,7 @@ function renderCategories(){
 
   if(host.dataset.signature===signature && host.children.length===cats.length)return;
 
-  const oldY=window.scrollY;
+  const oldMenuTop=menu.scrollTop;
   host.dataset.signature=signature;
   host.replaceChildren();
   tabs.querySelectorAll('.lbCustomTab').forEach(x=>x.remove());
@@ -121,17 +126,30 @@ function renderCategories(){
     tab.className='tab lbCustomTab';
     tab.textContent=cat.split('/')[0].trim();
     tab.onclick=()=>{
-      const y=section.getBoundingClientRect().top+window.scrollY-90;
-      window.scrollTo(0,y);
+      const y=section.getBoundingClientRect().top+menu.scrollTop-menu.getBoundingClientRect().top-8;
+      menu.scrollTo({top:y,behavior:'smooth'});
     };
     tabs.appendChild(tab);
   });
 
   host.appendChild(frag);
 
-  /* Critical fix: restoring the exact viewport prevents the custom section
-     from pulling the user down to Current Bill when it is refreshed. */
-  window.scrollTo(0,oldY);
+  /* Keep the menu viewport stable when custom content refreshes. */
+  menu.scrollTop=oldMenuTop;
+}
+
+function patchCanonicalRenderMenu(){
+  if(window.__lbCleanRenderMenuPatched)return;
+  if(typeof window.renderMenu!=='function')return;
+
+  const original=window.renderMenu;
+  window.__lbCleanRenderMenuPatched=true;
+
+  window.renderMenu=function(){
+    const result=original.apply(this,arguments);
+    setTimeout(renderCategories,0);
+    return result;
+  };
 }
 
 function saveCategories(list){
@@ -183,7 +201,6 @@ function style(){
   const s=document.createElement('style');
   s.id='lb-clean-category-style';
   s.textContent='#lbCleanCustomHost{display:block;margin:0 0 10px;overflow-anchor:none}.lbCustomSection{margin:0 0 10px;overflow-anchor:none}.lbCustomTab{background:#fff!important;color:#111!important}.lbCustomTab:focus{outline:none}.lbCustomItem{color:#111!important}.lbCustomImg{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;height:70px!important;object-fit:cover;border-radius:7px;display:block;margin-bottom:5px}';
-
   document.head.appendChild(s);
 }
 
@@ -205,10 +222,13 @@ function loadExtras(){
 function apply(){
   style();
   injectManager();
-  /* Disable the old manager renderer. Cloud sync calls this function; routing it
-     to the clean renderer prevents duplicate custom sections and viewport jumps. */
+  patchCanonicalRenderMenu();
+
+  /* Cloud/manager code may call either legacy renderer name.
+     Both now use the single clean renderer. */
   window.renderCustomMenuItems=renderCategories;
   window.renderCustomCategories=renderCategories;
+
   renderCategories();
 }
 
@@ -221,6 +241,7 @@ if(document.readyState==='loading'){
 window.addEventListener('load',()=>{
   setTimeout(()=>{
     injectManager();
+    patchCanonicalRenderMenu();
     renderCategories();
     loadExtras();
   },300);
