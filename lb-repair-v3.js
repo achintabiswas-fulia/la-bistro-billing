@@ -31,7 +31,7 @@ function draw(){
  tabs.innerHTML=M.map((c,i)=>`<button type="button" class="tab ${i===cat?'active':''}" data-cat="${i}">${q(c[0])}</button>`).join('');
  tabs.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cat=Number(b.dataset.cat);draw()});
  const c=M[cat];
- panel.innerHTML=`<div class="category-title">${q(c[0])}</div><div class="grid">${c[1].map((it,i)=>`<button type="button" class="item lb-real-item" data-i="${i}"><span class="lb-dot">＋</span><div class="en">${q(it[0])}</div><div class="bn">${q(it[1])}</div><div class="price">${money(it[2])}</div></button>`).join('')}</div>`;
+ panel.innerHTML=`<div class="category-title">${q(c[0])}</div><div class="grid">${c[1].map((it,i)=>`<button type="button" class="item lb-real-item" data-i="${i}"><span class="lb-dot fresh-qty-controls"><span class="fresh-minus">−</span><b class="fresh-count">0</b><span class="fresh-plus">+</span></span><div class="en">${q(it[0])}</div><div class="bn">${q(it[1])}</div><div class="price">${money(it[2])}</div></button>`).join('')}</div>`;
  panel.querySelectorAll('.lb-real-item').forEach(b=>b.onclick=()=>{
    const it=c[1][Number(b.dataset.i)];
    if(typeof window.addItem==='function'){
@@ -63,7 +63,10 @@ function style(){if(document.getElementById('lb-v3-style'))return;const s=docume
 #menuPanel .item .en{display:block!important;color:#111!important;-webkit-text-fill-color:#111!important;font-size:15px!important;font-weight:900!important;line-height:1.2!important;margin-top:8px!important}
 #menuPanel .item .bn{display:block!important;color:#222!important;-webkit-text-fill-color:#222!important;font-size:14px!important;font-weight:800!important;line-height:1.25!important;margin-top:5px!important}
 #menuPanel .item .price{display:block!important;color:#111!important;-webkit-text-fill-color:#111!important;font-size:16px!important;font-weight:900!important;margin-top:auto!important;align-self:flex-end!important}
-#menuPanel .lb-dot{position:absolute!important;top:7px!important;right:8px!important;font-size:20px!important;font-weight:900!important;color:#b38316!important}
+#menuPanel .lb-dot{position:absolute!important;top:6px!important;right:7px!important;display:flex!important;align-items:center!important;gap:4px!important;background:#fff!important;border:1px solid #b9953e!important;border-radius:8px!important;padding:2px 3px!important;color:#111!important;font-size:16px!important;font-weight:900!important;z-index:5!important}
+#menuPanel .fresh-qty-controls span{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:25px!important;height:25px!important;border:1px solid #b9953e!important;border-radius:6px!important;background:#fff!important;color:#111!important;font-size:19px!important;line-height:1!important;cursor:pointer!important}
+#menuPanel .fresh-qty-controls b{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:18px!important;height:25px!important;color:#111!important;font-size:14px!important}
+#menuPanel .fresh-minus,#menuPanel .fresh-plus{touch-action:manipulation!important}
 @media(min-width:700px){#menuPanel .grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 `;
 document.head.appendChild(s)}
