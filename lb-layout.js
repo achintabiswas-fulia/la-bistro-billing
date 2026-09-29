@@ -120,7 +120,14 @@ function renderCategories(){
       const getQty=()=>Number(window.__freshCart?.[customKey()]?.qty||0);
       const setQty=q=>{
         q=Math.max(0,Math.floor(Number(q)||0));
-        window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q);
+        const en=String(x.en||''),bn=String(x.bn||''),price=Number(x.price||0);
+        window.lbFreshCustomSetQty?.(en,bn,price,q);
+        if(window.cart&&typeof window.renderCart==='function'){
+          const legacyKey=en+'|'+bn+'|'+price;
+          if(q>0) window.cart[legacyKey]={item:[en,bn,price],qty:q};
+          else delete window.cart[legacyKey];
+          window.renderCart();
+        }
         count.textContent=getQty();
       };
       count.textContent=getQty();
