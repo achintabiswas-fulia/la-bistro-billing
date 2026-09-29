@@ -104,16 +104,14 @@ function renderCategories(){
 
       /* Match the locked V51 quantity UX:
          minus on the left, quantity in the center, plus on the right. */
-      const controls=document.createElement('div');
+      const controls=document.createElement('span');
       controls.className='lbCustomQtyControls';
-      const minus=document.createElement('button');
-      minus.type='button';
+      const minus=document.createElement('span');
       minus.className='lbCustomMinus';
       minus.textContent='−';
       const count=document.createElement('b');
       count.className='lbCustomCount';
-      const plus=document.createElement('button');
-      plus.type='button';
+      const plus=document.createElement('span');
       plus.className='lbCustomPlus';
       plus.textContent='+';
       controls.append(minus,count,plus);
@@ -130,27 +128,6 @@ function renderCategories(){
       minus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()-1);};
       plus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()+1);};
       controls.onclick=e=>{e.preventDefault();e.stopPropagation();};
-
-      /* HARD BLOCK: custom card itself must never add an item.
-         Only the actual − and + symbol boxes are allowed to change quantity. */
-      /* Keep the card itself passive. Only the two symbol buttons receive input. */
-      card.style.pointerEvents='auto';
-      controls.style.pointerEvents='auto';
-      const stopCard=e=>{e.preventDefault();e.stopPropagation();};
-      card.addEventListener('click',e=>{
-        if(!e.target.closest('.lbCustomMinus,.lbCustomPlus')) stopCard(e);
-      });
-      const bindQtyButton=(btn,delta)=>{
-        const act=e=>{
-          e.preventDefault();
-          e.stopPropagation();
-          setQty(getQty()+delta);
-        };
-        btn.onclick=act;
-        btn.ontouchend=act;
-      };
-      bindQtyButton(minus,-1);
-      bindQtyButton(plus,1);
 
       card.append(controls,en,bn,price);
 
@@ -270,7 +247,7 @@ function style(){
 
   const s=document.createElement('style');
   s.id='lb-clean-category-style';
-  s.textContent='#lbCleanCustomHost{display:block;margin:0 0 10px;overflow-anchor:none}.lbCustomSection{margin:0 0 10px;overflow-anchor:none}.lbCustomTab{background:#fff!important;color:#111!important}.lbCustomTab:focus{outline:none}.lbCustomItem{color:#111!important;padding-top:43px!important;pointer-events:none!important}.lbCustomImg,.lbCustomItem .en,.lbCustomItem .bn,.lbCustomItem .price{pointer-events:none!important}.lbCustomImg{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;height:70px!important;object-fit:cover;border-radius:7px;display:block;margin-bottom:5px}.lbCustomQtyControls{position:absolute;left:7px;right:7px;top:7px;height:32px;display:flex;align-items:center;justify-content:space-between;z-index:10;pointer-events:auto!important}.lbCustomQtyControls button{pointer-events:auto!important;display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border:1px solid #c9a74f;border-radius:7px;background:#fff;color:#111;font-size:20px;line-height:1;cursor:pointer;padding:0}.lbCustomQtyControls b{pointer-events:none;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:32px;border:1px solid #c9a74f;border-radius:7px;background:#fff;color:#111;font-size:17px;line-height:1;font-weight:800}';
+  s.textContent='#lbCleanCustomHost{display:block;margin:0 0 10px;overflow-anchor:none}.lbCustomSection{margin:0 0 10px;overflow-anchor:none}.lbCustomTab{background:#fff!important;color:#111!important}.lbCustomTab:focus{outline:none}.lbCustomItem{color:#111!important;padding-top:43px!important}.lbCustomImg{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;height:70px!important;object-fit:cover;border-radius:7px;display:block;margin-bottom:5px}.lbCustomQtyControls{position:absolute;left:7px;right:7px;top:7px;height:32px;display:flex;align-items:center;justify-content:space-between;z-index:5;pointer-events:none}.lbCustomQtyControls span,.lbCustomQtyControls b{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;border:1px solid #c9a74f;border-radius:7px;background:#fff;color:#111;font-size:20px;line-height:1;cursor:pointer}.lbCustomQtyControls b{min-width:26px;font-size:17px;font-weight:800}';
   document.head.appendChild(s);
 }
 
