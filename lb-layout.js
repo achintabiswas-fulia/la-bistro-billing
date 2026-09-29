@@ -205,6 +205,10 @@ function loadExtras(){
 function apply(){
   style();
   injectManager();
+  /* Disable the old manager renderer. Cloud sync calls this function; routing it
+     to the clean renderer prevents duplicate custom sections and viewport jumps. */
+  window.renderCustomMenuItems=renderCategories;
+  window.renderCustomCategories=renderCategories;
   renderCategories();
 }
 
