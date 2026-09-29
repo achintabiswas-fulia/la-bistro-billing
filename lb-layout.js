@@ -32,6 +32,7 @@
     panel.innerHTML='';
     const sec=document.createElement('section');
     sec.className='lbCustomSection lbCustomActiveSection';
+    sec.dataset.category=cat;
     const title=document.createElement('div');
     title.className='category-title';
     title.textContent=cat;
@@ -52,7 +53,6 @@
           window.cart=window.cart||{};
           window.cart[key]={item:[x.en,x.bn,Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
           window.renderCart?.();
-          showCustomCategory(cat);
         }catch(e){}
       };
       grid.appendChild(card);
@@ -68,7 +68,7 @@
     document.querySelectorAll('.tabs .lbCustomTab').forEach(b=>{
       b.classList.toggle('active',b.dataset.category===cat);
     });
-    sec.scrollIntoView({behavior:'smooth',block:'start'});
+    // Keep the page position stable. Do not auto-scroll or animate the panel.
   }
 
   function renderCategories(){
@@ -91,7 +91,8 @@
     });
 
     if(window.__lbSelectedCustomCategory){
-      showCustomCategory(window.__lbSelectedCustomCategory);
+      const current=document.querySelector('.lbCustomActiveSection[data-category]');
+      if(!current || current.dataset.category!==window.__lbSelectedCustomCategory) showCustomCategory(window.__lbSelectedCustomCategory);
     }
   }
 
