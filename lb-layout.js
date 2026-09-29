@@ -5,7 +5,12 @@
   const MY_ITEMS='MY ITEMS / আমার আইটেম';
 
   function customItems(){
-    return Array.isArray(window.LB?.customItems)?window.LB.customItems:[];
+    const a=Array.isArray(window.LB?.customItems)?window.LB.customItems:[];
+    if(a.length)return a;
+    try{
+      const b=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');
+      return Array.isArray(b)?b:[];
+    }catch(e){return []}
   }
   function normalizeCategory(v){
     const s=String(v||'').trim();
@@ -43,7 +48,8 @@
     const panel=getCustomPanel(); if(!panel)return;
     const base=document.getElementById('menuPanel');
     window.__lbSelectedCustomCategory=cat;
-    const group=customItems().filter(x=>normalizeCategory(x.category)===cat);
+    const wanted=String(cat||'').trim();
+    const group=customItems().filter(x=>normalizeCategory(x.category).trim()===wanted);
     panel.innerHTML='';
     const sec=document.createElement('section');
     sec.className='lbCustomSection lbCustomActiveSection';
