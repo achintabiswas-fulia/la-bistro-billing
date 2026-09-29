@@ -71,6 +71,27 @@
     // Keep the page position stable. Do not auto-scroll or animate the panel.
   }
 
+  function installCustomTabTapHandler(){
+    if(window.__lbCustomTabTapHandler)return;
+    window.__lbCustomTabTapHandler=true;
+    document.addEventListener('click',(e)=>{
+      const b=e.target?.closest?.('.lbCustomTab');
+      if(!b)return;
+      e.preventDefault();
+      e.stopPropagation();
+      const cat=b.dataset.category;
+      if(cat)showCustomCategory(cat);
+    },true);
+    document.addEventListener('touchend',(e)=>{
+      const b=e.target?.closest?.('.lbCustomTab');
+      if(!b)return;
+      e.preventDefault();
+      e.stopPropagation();
+      const cat=b.dataset.category;
+      if(cat)showCustomCategory(cat);
+    },{capture:true,passive:false});
+  }
+
   function renderCategories(){
     const tabsHost=document.getElementById('tabs')||document.querySelector('.tabs');
     if(!tabsHost)return;
@@ -91,7 +112,6 @@
         window.__lbSelectedCustomCategory=cat;
         showCustomCategory(cat);
       };
-      b.onpointerdown=(e)=>{ e.stopPropagation(); };
       tabsHost.appendChild(b);
     });
 
@@ -133,6 +153,7 @@
   }
 
   function applyMobileLayout(){
+    installCustomTabTapHandler();
     if(!document.getElementById('lb-mobile-layout-style')){
       const style=document.createElement('style');
       style.id='lb-mobile-layout-style';
