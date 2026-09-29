@@ -28,8 +28,50 @@
         b.onclick=(e)=>{
           e.preventDefault();
           e.stopPropagation();
-          const target=document.getElementById(sec.id);
-          if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+          const items=Array.isArray(window.LB?.customItems)?window.LB.customItems:[];
+          const group=items.filter(x=>String(x.category||'').trim()===String(cat).trim());
+          const panel=document.getElementById('menuPanel');
+          if(!panel)return;
+          panel.querySelectorAll('.lbCustomSection').forEach(x=>x.style.display='none');
+          let target=document.getElementById(sec.id);
+          if(!target){
+            target=document.createElement('section');
+            target.className='lbCustomSection';
+            target.id=sec.id;
+            panel.appendChild(target);
+          }
+          target.style.display='block';
+          target.innerHTML='';
+          const title=document.createElement('div');
+          title.className='category-title';
+          title.textContent=cat;
+          target.appendChild(title);
+          const grid=document.createElement('div');
+          grid.className='grid';
+          group.forEach(x=>{
+            const card=document.createElement('button');
+            card.type='button';
+            card.className='item lbCustomItem';
+            card.innerHTML='<div class="en"></div><div class="bn"></div><div class="price"></div>';
+            card.querySelector('.en').textContent=x.en||'';
+            card.querySelector('.bn').textContent=x.bn||'';
+            card.querySelector('.price').textContent='₹'+Number(x.price||0).toFixed(0);
+            card.onclick=()=>{
+              window.cart=window.cart||{};
+              const k='custom::'+(x.id||x.en+'|'+x.bn);
+              window.cart[k]=window.cart[k]||{item:[x.en||'',x.bn||'',Number(x.price||0)],qty:0};
+              window.cart[k].qty++;
+              window.renderCart?.();
+            };
+            grid.appendChild(card);
+          });
+          if(!group.length){
+            const empty=document.createElement('div');
+            empty.className='empty';
+            empty.textContent='No items found / কোনো আইটেম পাওয়া যায়নি';
+            target.appendChild(empty);
+          }else target.appendChild(grid);
+          target.scrollIntoView({behavior:'smooth',block:'start'});
         };
         tabsHost.appendChild(b)
       }
