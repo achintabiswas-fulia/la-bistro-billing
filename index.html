@@ -169,6 +169,7 @@ function changeLogo(event){
       try{
         localStorage.setItem('laBistroLogo',data);
         localStorage.setItem('la_bistro_logo',data);
+        if(window.lbCloudPush)setTimeout(()=>window.lbCloudPush(),100);
         alert('Logo updated / লোগো পরিবর্তন হয়েছে');
       }catch(err){
         alert('Logo is too large for this phone browser. Please choose a smaller image / লোগোটি খুব বড়। ছোট ছবি নির্বাচন করুন');
