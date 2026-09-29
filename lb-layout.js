@@ -9,10 +9,18 @@
   }
   function saveCategories(a){localStorage.setItem('lb_categories_v1',JSON.stringify(a));}
   function allCategories(){const saved=(()=>{try{return JSON.parse(localStorage.getItem('lb_categories_v1')||'[]')}catch(e){return []}})();const names=[];const add=v=>{v=String(v||'').trim();if(v&&!names.includes(v))names.push(v);};saved.forEach(add);categoryNames().forEach(add);return names;}
+  function customItems(){
+    try{
+      const a=window.LB?.customItems;
+      if(Array.isArray(a)&&a.length)return a;
+      const b=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');
+      return Array.isArray(b)?b:[];
+    }catch(e){return Array.isArray(window.LB?.customItems)?window.LB.customItems:[]}
+  }
   function renderCategories(){
     const panel=document.getElementById('menuPanel');const tabsHost=document.querySelector('.tabs');if(!panel)return;
     panel.querySelectorAll('.lbCustomSection').forEach(x=>x.remove());tabsHost?.querySelectorAll('.lbCustomTab').forEach(x=>x.remove());
-    const items=window.LB?.customItems||[];
+    const items=customItems();
     allCategories().forEach(cat=>{
       const sec=document.createElement('section');sec.className='lbCustomSection';sec.id='lbcat_'+btoa(unescape(encodeURIComponent(cat))).replace(/[^a-zA-Z0-9]/g,'');sec.style.scrollMarginTop='95px';
       sec.innerHTML='<div class="category-title"></div><div class="grid"></div>';sec.querySelector('.category-title').textContent=cat;
@@ -28,7 +36,7 @@
         b.onclick=(e)=>{
           e.preventDefault();
           e.stopPropagation();
-          const items=Array.isArray(window.LB?.customItems)?window.LB.customItems:[];
+          const items=customItems();
           const group=items.filter(x=>String(x.category||'').trim()===String(cat).trim());
           const panel=document.getElementById('menuPanel');
           if(!panel)return;
@@ -89,6 +97,7 @@
   function loadSyncBridge(){if(document.querySelector('script[data-lb-sync-fix]'))return;const s=document.createElement('script');s.src='./lb-sync-fix.js?v=2';s.dataset.lbSyncFix='1';document.head.appendChild(s)}
   function loadSalesHistory(){if(document.querySelector('script[data-lb-sales-history]'))return;const s=document.createElement('script');s.src='./lb-sales-history.js?v=1';s.dataset.lbSalesHistory='1';document.head.appendChild(s)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyMobileLayout,{once:true});else applyMobileLayout();
+  window.addEventListener('lb-cloud-updated',()=>setTimeout(renderCategories,50));
   window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();loadSyncBridge();loadSalesHistory()},300));
   window.lbRenderCategories=renderCategories;
 })();
