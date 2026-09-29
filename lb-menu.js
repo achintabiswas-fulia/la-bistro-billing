@@ -27,32 +27,20 @@ function watchMenu(){
  menuObserver.observe(panel,{childList:true,subtree:true});
 }
 function install(){let host=document.getElementById('fresh-billing');if(!host){host=document.createElement('div');host.id='fresh-billing';const old=document.querySelector('.cart');if(old){old.style.display='none';old.parentNode.insertBefore(host,old)}else document.body.appendChild(host)}injectMenuControls();watchMenu();renderFreshBill()}
-// Robust category navigation: always activate the canonical base tab that was tapped.
+// Keep normal browser/button clicks working. Category buttons use the canonical inline onclick from index.html.
+// Quantity controls stop propagation so the surrounding menu button does not also add an item.
 document.addEventListener('click',e=>{
-  const tab=e.target.closest?.('#tabs .tab');
-  if(tab && !tab.classList.contains('lbCustomTab')){
-    const baseTabs=[...document.querySelectorAll('#tabs .tab:not(.lbCustomTab)')];
-    const idx=baseTabs.indexOf(tab);
-    if(idx>=0){
-      e.preventDefault();e.stopImmediatePropagation();
-      window.activeCategory=idx;
-      try{window.renderTabs?.();window.renderMenu?.()}catch(err){console.error('Category navigation:',err)}
-      setTimeout(()=>document.getElementById('tabs')?.querySelectorAll('.tab')[idx]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}),0);
-      return;
-    }
-  }
-},true);
-document.addEventListener('click',e=>{const control=e.target.closest?.('.fresh-qty-controls');if(control){e.preventDefault();e.stopPropagation();const card=control.closest('.item'),info=card&&itemInfo(card);if(!info)return;if(e.target.closest('.fresh-minus'))sub(info);else if(e.target.closest('.fresh-plus'))add(info);return}const card=e.target.closest?.('#menuPanel .item');if(card){e.preventDefault();e.stopPropagation();const info=itemInfo(card);if(info.en)add(info)}},true);
-function ensureCategoryTabs(){
- const host=document.getElementById('tabs');
- if(!host)return;
- host.style.display='flex';
- host.style.visibility='visible';
- host.style.minHeight='52px';
- if(!host.querySelector('.tab') && typeof window.renderTabs==='function'){
-   try{window.renderTabs();}catch(e){console.error('Render category tabs:',e)}
- }
-}
+  const control=e.target.closest?.('.fresh-qty-controls');
+  if(!control)return;
+  e.preventDefault();
+  e.stopPropagation();
+  const card=control.closest('.item');
+  const info=card&&itemInfo(card);
+  if(!info)return;
+  if(e.target.closest('.fresh-minus'))sub(info);
+  else if(e.target.closest('.fresh-plus'))add(info);
+},false);
+
 function loadMenu(){
   ensureCategoryTabs();
   // Use the locked canonical MENU/renderMenu from index.html.
