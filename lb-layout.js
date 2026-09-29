@@ -293,8 +293,45 @@ function loadExtras(){
   }
 }
 
+function installCustomQtyTouchHandler(){
+  if(window.__lbCustomQtyTouchHandler)return;
+  window.__lbCustomQtyTouchHandler=true;
+
+  document.addEventListener('click',function(e){
+    const control=e.target.closest?.('.lbCustomQtyControls');
+    if(!control)return;
+
+    const card=control.closest('.lbCustomItem');
+    if(!card)return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    const en=(card.querySelector('.en')?.textContent||'').trim();
+    const bn=(card.querySelector('.bn')?.textContent||'').trim();
+    const price=Number((card.querySelector('.price')?.textContent||'').replace(/[^0-9.]/g,''))||0;
+    const k=en+'||'+bn+'||'+price;
+
+    let q=Number(window.__freshCart?.[k]?.qty||0);
+
+    if(e.target.closest('.lbCustomMinus')) q=Math.max(0,q-1);
+    else if(e.target.closest('.lbCustomPlus')) q=q+1;
+    else return;
+
+    window.__freshCart=window.__freshCart||Object.create(null);
+
+    if(q===0) delete window.__freshCart[k];
+    else window.__freshCart[k]={en,bn,price,key:k,qty:q};
+
+    window.renderFreshBill?.();
+    setTimeout(renderCategories,0);
+  },true);
+}
+
 function apply(){
   style();
+  installCustomQtyTouchHandler();
   injectManager();
   patchCanonicalRenderMenu();
   patchCanonicalRenderTabs();
