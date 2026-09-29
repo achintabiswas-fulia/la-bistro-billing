@@ -37,6 +37,7 @@ function hiddenFields(){
  return{n,p};
 }
 function build(){
+ if(document.getElementById('customer')&&document.getElementById('customerPhone')) return;
  css();
  const c=billBox();if(!c)return;
  const h=hiddenFields();
