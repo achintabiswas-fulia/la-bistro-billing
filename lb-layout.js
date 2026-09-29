@@ -31,79 +31,73 @@
     return out;
   }
 
-  function showCustomCategory(cat){
+  function renderCustomSectionsAfterBase(){
     const panel=document.getElementById('menuPanel');
     if(!panel)return;
-    const wanted=String(cat||'').trim();
-    let items=customItems();
-    if(!items.length){
-      try{
-        const raw=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');
-        if(Array.isArray(raw))items=raw;
-      }catch(e){}
-    }
-    const group=items.filter(x=>normalizeCategory(x.category).trim()===wanted);
+    panel.querySelectorAll('.lbCustomSection').forEach(x=>x.remove());
 
-    panel.innerHTML='';
-    panel.style.display='';
-    panel.hidden=false;
-
-    const title=document.createElement('div');
-    title.className='category-title';
-    title.textContent=wanted;
-    panel.appendChild(title);
-
-    const grid=document.createElement('div');
-    grid.className='grid';
-    grid.style.cssText='display:grid!important;visibility:visible!important;opacity:1!important;overflow:visible!important;';
-
-    group.forEach(x=>{
-      const card=document.createElement('button');
-      card.type='button';
-      card.className='item lbCustomItem';
-      card.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;min-height:128px!important;';
-      const en=document.createElement('div');
-      en.className='en';
-      en.textContent=x.en||'';
-      const bn=document.createElement('div');
-      bn.className='bn';
-      bn.textContent=x.bn||'';
-      const price=document.createElement('div');
-      price.className='price';
-      price.textContent='₹'+Number(x.price||0).toFixed(0);
-      card.appendChild(en);
-      card.appendChild(bn);
-      card.appendChild(price);
-      if(x.image){
-        const img=document.createElement('img');
-        img.className='lbCustomImg';
-        img.src=x.image;
-        img.alt='';
-        card.insertBefore(img,en);
-      }
-      card.onclick=()=>{
-        const key='custom::'+(x.id||((x.en||'')+'|'+(x.bn||'')+'|'+Number(x.price||0)));
-        window.cart=window.cart||{};
-        window.cart[key]=window.cart[key]||{item:[x.en||'',x.bn||'',Number(x.price||0)],qty:0};
-        window.cart[key].qty++;
-        window.renderCart?.();
-      };
-      grid.appendChild(card);
+    const groups={};
+    customItems().forEach(x=>{
+      const cat=normalizeCategory(x.category);
+      (groups[cat]||(groups[cat]=[])).push(x);
     });
 
-    if(!group.length){
-      const empty=document.createElement('div');
-      empty.style.cssText='display:block!important;padding:20px;text-align:center;color:#111;background:#fff;border:1px solid #ddd;border-radius:8px;';
-      empty.textContent='No saved items found / কোনো সেভ করা আইটেম পাওয়া যায়নি';
-      grid.appendChild(empty);
-    }
+    Object.keys(groups).forEach(cat=>{
+      const section=document.createElement('section');
+      section.className='lbCustomSection';
+      section.dataset.category=cat;
+      section.style.cssText='display:block!important;margin-top:12px!important;';
+      
+      const title=document.createElement('div');
+      title.className='category-title';
+      title.textContent=cat;
+      section.appendChild(title);
 
-    panel.appendChild(grid);
-    window.__lbSelectedCustomCategory=wanted;
+      const grid=document.createElement('div');
+      grid.className='grid';
+      grid.style.cssText='display:grid!important;visibility:visible!important;opacity:1!important;overflow:visible!important;';
 
-    document.querySelectorAll('.tabs .lbCustomTab').forEach(btn=>{
-      btn.classList.toggle('active',String(btn.dataset.category||'').trim()===wanted);
+      groups[cat].forEach(x=>{
+        const card=document.createElement('button');
+        card.type='button';
+        card.className='item lbCustomItem';
+        card.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;min-height:128px!important;';
+        const en=document.createElement('div'); en.className='en'; en.textContent=x.en||'';
+        const bn=document.createElement('div'); bn.className='bn'; bn.textContent=x.bn||'';
+        const price=document.createElement('div'); price.className='price'; price.textContent='₹'+Number(x.price||0).toFixed(0);
+        card.append(en,bn,price);
+        if(x.image){
+          const img=document.createElement('img'); img.className='lbCustomImg'; img.src=x.image; img.alt='';
+          card.insertBefore(img,en);
+        }
+        card.onclick=()=>{
+          const key='custom::'+(x.id||((x.en||'')+'|'+(x.bn||'')+'|'+Number(x.price||0)));
+          window.cart=window.cart||{};
+          window.cart[key]=window.cart[key]||{item:[x.en||'',x.bn||'',Number(x.price||0)],qty:0};
+          window.cart[key].qty++;
+          window.renderCart?.();
+        };
+        grid.appendChild(card);
+      });
+      section.appendChild(grid);
+      panel.appendChild(section);
     });
+  }
+
+  function showCustomCategory(cat){
+    const section=document.querySelector('#menuPanel .lbCustomSection[data-category="'+String(cat||'').replace(/"/g,'\\\"')+'"]');
+    if(section){
+      window.__lbSelectedCustomCategory=String(cat||'').trim();
+      section.scrollIntoView({behavior:'smooth',block:'start'});
+      document.querySelectorAll('.tabs .lbCustomTab').forEach(btn=>{
+        btn.classList.toggle('active',String(btn.dataset.category||'').trim()===window.__lbSelectedCustomCategory);
+      });
+      return;
+    }
+    window.__lbSelectedCustomCategory=String(cat||'').trim();
+    renderCustomSectionsAfterBase();
+    const target=document.querySelector('#menuPanel .lbCustomSection[data-category="'+String(cat||'').replace(/"/g,'\\\"')+'"]');
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function installCustomTabTapHandler(){
@@ -131,7 +125,7 @@
     const customPanel=document.getElementById('lbCustomPanel');
     if(!window.__lbSelectedCustomCategory && customPanel)customPanel.style.display='none';
     const basePanel=document.getElementById('menuPanel');
-    if(!window.__lbSelectedCustomCategory && basePanel)basePanel.style.display='';
+    if(basePanel)basePanel.style.display='';
 
     const tabsHost=document.getElementById('tabs')||document.querySelector('.tabs');
     if(!tabsHost)return;
