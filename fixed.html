@@ -7,23 +7,48 @@
 <style>html,body{margin:0;padding:0;background:#fff;min-height:100%}iframe{display:block;width:100%;height:3000px;border:0}</style>
 </head>
 <body>
-<iframe id="pos" src="./index.html?professional=20260925-12"></iframe>
+<iframe id="pos" src="./index.html?professional=20260929-01"></iframe>
 <script>
 const f=document.getElementById('pos');
-f.addEventListener('load',()=>{
+function install(){
  try{
-  const d=f.contentDocument;
-  const s=d.createElement('style');
-  s.textContent=`
-  /* ONLY fix the unreadable dark buttons. Do not alter the menu/layout. */
+  const d=f.contentDocument;if(!d||d.getElementById('lbCustomerPanel'))return false;
+  const style=d.createElement('style');
+  style.textContent=`
   .top-actions .btn,.top-actions button{background:#17130b!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:800!important}
   .top-actions .btn.primary{background:linear-gradient(#e8b63e,#a87513)!important;color:#080808!important;-webkit-text-fill-color:#080808!important}
   .print-actions .btn:not(.primary),#whatsappBtn,#whatsappBillBtn{background:#17130b!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:800!important}
   #gst,#gstInput,input[name="gst"],input.gst{background:#fff!important;color:#111!important;-webkit-text-fill-color:#111!important;border:1px solid #999!important;font-weight:700!important}
+  #lbCustomerPanel{background:#fff8df!important;border:1px solid #c8a94e!important;border-radius:11px!important;padding:10px!important;margin:0 0 9px!important;color:#111!important}
+  #lbCustomerPanel .lb-title{font-weight:800;font-size:17px;margin-bottom:7px}
+  #lbCustomerPanel input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #b8953b;border-radius:7px;background:#fff;color:#111;font-size:15px;margin:4px 0}
+  #lbCustomerPanel .lb-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  #lbCustomerPanel .lb-help{font-size:11px;color:#666;margin-top:3px}
+  @media(max-width:560px){#lbCustomerPanel .lb-row{grid-template-columns:1fr}}
+  @media print{#lbCustomerPanel{background:#fff!important;border:0!important;margin-bottom:10px!important;padding:0!important}#lbCustomerPanel .lb-help{display:none!important}#lbCustomerPanel input{border:0!important;padding:0!important;margin:0!important;font-size:13px!important}#lbCustomerPanel .lb-title{font-size:15px!important}}
   `;
-  d.head.appendChild(s);
- }catch(e){console.log(e)}
-});
+  d.head.appendChild(style);
+  const h=[...d.querySelectorAll('h1,h2,h3')].find(x=>/Current Bill|বর্তমান বিল/i.test(x.textContent||''));
+  if(!h)return false;
+  const host=h.parentElement;
+  const panel=d.createElement('div');panel.id='lbCustomerPanel';
+  panel.innerHTML=`<div class="lb-title">Customer Details / কাস্টমারের তথ্য</div><div class="lb-row"><input id="lbCustomerName" type="text" placeholder="Customer Name / কাস্টমারের নাম"><input id="lbCustomerPhone" type="tel" inputmode="numeric" placeholder="WhatsApp Number / হোয়াটসঅ্যাপ নম্বর"></div><div class="lb-help">Enter the customer's number with India code if needed, e.g. 919876543210.</div>`;
+  host.insertBefore(panel,h);
+  const name=d.getElementById('lbCustomerName'),phone=d.getElementById('lbCustomerPhone');
+  const saved=JSON.parse(localStorage.getItem('lb_customer')||'{}');name.value=saved.name||'';phone.value=saved.phone||'';
+  [name,phone].forEach(x=>x.addEventListener('input',()=>localStorage.setItem('lb_customer',JSON.stringify({name:name.value,phone:phone.value}))));
+  function billText(){const text=(host.innerText||'').replace(/\n{3,}/g,'\n\n').trim();return `La Bistro\n\nCustomer: ${name.value||'Customer'}\n${text}`;}
+  function cleanPhone(v){return (v||'').replace(/\D/g,'').replace(/^0/,'91');}
+  function sendWhatsApp(){const p=cleanPhone(phone.value);if(p.length<10){alert('Please enter the customer WhatsApp number first.');phone.focus();return false;}window.open('https://wa.me/'+p+'?text='+encodeURIComponent(billText()),'_blank');return true;}
+  function printBill(){const p=cleanPhone(phone.value);if(p.length>=10){window.open('https://wa.me/'+p+'?text='+encodeURIComponent(billText()),'_blank');}setTimeout(()=>window.print(),250);}
+  const wa=[...d.querySelectorAll('button,.btn')].find(x=>/WHATSAPP BILL/i.test(x.textContent||''));
+  if(wa)wa.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();sendWhatsApp();},true);
+  const pr=[...d.querySelectorAll('button,.btn')].find(x=>/PRINT BILL/i.test(x.textContent||''));
+  if(pr)pr.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();printBill();},true);
+  return true;
+ }catch(e){console.log('La Bistro fix',e);return false}
+}
+f.addEventListener('load',()=>{let n=0;const t=setInterval(()=>{if(install()||++n>30)clearInterval(t)},500)});
 </script>
 </body>
 </html>
