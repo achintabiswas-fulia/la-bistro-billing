@@ -31,68 +31,76 @@
     return out;
   }
 
-  function getCustomPanel(){
-    let p=document.getElementById('lbCustomPanel');
-    if(p)return p;
-    const layout=document.querySelector('.layout');
-    const base=document.getElementById('menuPanel');
-    if(!layout)return null;
-    p=document.createElement('main');
-    p.id='lbCustomPanel';
-    p.className='menu-panel';
-    p.style.display='none';
-    if(base)layout.insertBefore(p,base); else layout.insertBefore(p,layout.firstChild);
-    return p;
-  }
-
   function showCustomCategory(cat){
-    const panel=getCustomPanel(); if(!panel)return;
-    const base=document.getElementById('menuPanel');
+    const panel=document.getElementById('menuPanel');
+    if(!panel)return;
     const wanted=String(cat||'').trim();
     let items=customItems();
     if(!items.length){
-      try{const raw=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');if(Array.isArray(raw))items=raw}catch(e){}
+      try{
+        const raw=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');
+        if(Array.isArray(raw))items=raw;
+      }catch(e){}
     }
     const group=items.filter(x=>normalizeCategory(x.category).trim()===wanted);
+
     panel.innerHTML='';
+    panel.style.display='';
+    panel.hidden=false;
+
     const title=document.createElement('div');
     title.className='category-title';
     title.textContent=wanted;
     panel.appendChild(title);
+
     const grid=document.createElement('div');
     grid.className='grid';
-    grid.style.cssText='display:grid!important;visibility:visible!important;opacity:1!important;';
+    grid.style.cssText='display:grid!important;visibility:visible!important;opacity:1!important;overflow:visible!important;';
+
     group.forEach(x=>{
       const card=document.createElement('button');
       card.type='button';
       card.className='item lbCustomItem';
-      card.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;';
-      const en=document.createElement('div'); en.className='en'; en.textContent=x.en||'';
-      const bn=document.createElement('div'); bn.className='bn'; bn.textContent=x.bn||'';
-      const price=document.createElement('div'); price.className='price'; price.textContent='₹'+Number(x.price||0).toFixed(0);
-      card.appendChild(en); card.appendChild(bn); card.appendChild(price);
+      card.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;min-height:128px!important;';
+      const en=document.createElement('div');
+      en.className='en';
+      en.textContent=x.en||'';
+      const bn=document.createElement('div');
+      bn.className='bn';
+      bn.textContent=x.bn||'';
+      const price=document.createElement('div');
+      price.className='price';
+      price.textContent='₹'+Number(x.price||0).toFixed(0);
+      card.appendChild(en);
+      card.appendChild(bn);
+      card.appendChild(price);
       if(x.image){
-        const img=document.createElement('img'); img.className='lbCustomImg'; img.src=x.image; img.alt=''; card.insertBefore(img,en);
+        const img=document.createElement('img');
+        img.className='lbCustomImg';
+        img.src=x.image;
+        img.alt='';
+        card.insertBefore(img,en);
       }
       card.onclick=()=>{
-        const key='custom::'+(x.id||((x.en||'')+'|'+(x.bn||'')));
+        const key='custom::'+(x.id||((x.en||'')+'|'+(x.bn||'')+'|'+Number(x.price||0)));
         window.cart=window.cart||{};
-        window.cart[key]={item:[x.en||'',x.bn||'',Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
+        window.cart[key]=window.cart[key]||{item:[x.en||'',x.bn||'',Number(x.price||0)],qty:0};
+        window.cart[key].qty++;
         window.renderCart?.();
       };
       grid.appendChild(card);
     });
+
     if(!group.length){
       const empty=document.createElement('div');
       empty.style.cssText='display:block!important;padding:20px;text-align:center;color:#111;background:#fff;border:1px solid #ddd;border-radius:8px;';
       empty.textContent='No saved items found / কোনো সেভ করা আইটেম পাওয়া যায়নি';
       grid.appendChild(empty);
     }
+
     panel.appendChild(grid);
     window.__lbSelectedCustomCategory=wanted;
-    if(base)base.style.display='none';
-    panel.style.display='block';
-    panel.hidden=false;
+
     document.querySelectorAll('.tabs .lbCustomTab').forEach(btn=>{
       btn.classList.toggle('active',String(btn.dataset.category||'').trim()===wanted);
     });
