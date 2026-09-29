@@ -19,7 +19,7 @@
       const grid=sec.querySelector('.grid');const group=items.filter(x=>String(x.category||'').trim()===cat);
       group.forEach(x=>{const card=document.createElement('div');card.className='item lbCustomItem';card.innerHTML=(x.image?'<img class="lbCustomImg" src="'+x.image+'" alt="">':'')+'<div class="en"></div><div class="bn"></div><div class="price">₹'+Number(x.price||0).toFixed(0)+'</div>';card.querySelector('.en').textContent=x.en||'';card.querySelector('.bn').textContent=x.bn||'';card.onclick=()=>{try{const key='custom::'+x.en+'|'+x.bn;window.cart[key]={item:[x.en,x.bn,x.price],qty:(window.cart[key]?.qty||0)+1};window.renderCart?.()}catch(e){}};grid.appendChild(card)});
       if(!group.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='No items yet / এখনও কোনো আইটেম নেই';grid.appendChild(empty)}
-      panel.appendChild(sec);if(tabsHost){const b=document.createElement('button');b.className='tab lbCustomTab';b.textContent=cat.split('/')[0].trim();b.onclick=()=>sec.scrollIntoView({behavior:'smooth',block:'start'});tabsHost.appendChild(b)}
+      panel.appendChild(sec);if(tabsHost){const b=document.createElement('button');b.type='button';b.className='tab lbCustomTab';b.textContent=cat.split('/')[0].trim();b.dataset.category=cat;b.onclick=(e)=>{e.preventDefault();e.stopPropagation();const top=Math.max(0,sec.offsetTop-panel.offsetTop-4);panel.scrollTo({top,behavior:'smooth'});b.classList.add('active');};tabsHost.appendChild(b)}
     });
   }
   function addCategoryControls(){
