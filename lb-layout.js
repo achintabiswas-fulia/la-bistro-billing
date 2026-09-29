@@ -125,6 +125,14 @@
       const cat=b.dataset.category;
       if(cat)showCustomCategory(cat);
     },{capture:true,passive:false});
+    document.addEventListener('click',(e)=>{
+      const base=e.target?.closest?.('#tabs .tab:not(.lbCustomTab)');
+      if(base)window.__lbSelectedCustomCategory=null;
+    },true);
+    document.addEventListener('touchend',(e)=>{
+      const base=e.target?.closest?.('#tabs .tab:not(.lbCustomTab)');
+      if(base)window.__lbSelectedCustomCategory=null;
+    },{capture:true,passive:false});
   }
 
   function renderCategories(){
@@ -232,7 +240,10 @@
     if(typeof window.renderTabs==='function' && !window.__lbCanonicalTabsHookedForCustomPanel){
       const originalTabs=window.renderTabs;
       window.renderTabs=function(){
-        window.__lbSelectedCustomCategory=null;
+        if(window.__lbSelectedCustomCategory){
+          renderCategories();
+          return;
+        }
         const cp=document.getElementById('lbCustomPanel'); if(cp)cp.style.display='none';
         const bp=document.getElementById('menuPanel'); if(bp)bp.style.display='';
         const out=originalTabs.apply(this,arguments);
@@ -246,16 +257,18 @@
       const original=window.renderMenu;
       window.renderMenu=function(){
         const searchEl=document.getElementById('search');
-        if(searchEl && searchEl.value.trim()) window.__lbSelectedCustomCategory=null;
-        const selected=window.__lbSelectedCustomCategory;
-        const out=original.apply(this,arguments);
-        if(selected && !(searchEl && searchEl.value.trim())){
-          setTimeout(()=>showCustomCategory(selected),0);
-        }else{
-          const cp=document.getElementById('lbCustomPanel'); if(cp)cp.style.display='none';
-          const bp=document.getElementById('menuPanel'); if(bp)bp.style.display='';
-          setTimeout(renderCategories,0);
+        if(searchEl && searchEl.value.trim()){
+          window.__lbSelectedCustomCategory=null;
         }
+        const selected=window.__lbSelectedCustomCategory;
+        if(selected && !(searchEl && searchEl.value.trim())){
+          showCustomCategory(selected);
+          return;
+        }
+        const out=original.apply(this,arguments);
+        const cp=document.getElementById('lbCustomPanel'); if(cp)cp.style.display='none';
+        const bp=document.getElementById('menuPanel'); if(bp)bp.style.display='';
+        setTimeout(renderCategories,0);
         return out;
       };
       window.__lbCanonicalMenuHookedForCustomPanel=true;
