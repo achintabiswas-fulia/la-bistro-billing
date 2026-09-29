@@ -43,6 +43,14 @@ function renderCategories(){
   const items=customItems();
   const cats=customCategories();
   const visibleCats=selectedCustomCategory&&cats.includes(selectedCustomCategory)?[selectedCustomCategory]:[];
+
+  /* When a custom category is selected, show ONLY that custom category.
+     The locked base menu stays in the DOM but is temporarily hidden so
+     the user does not see OUR SPECIALS or another base category first. */
+  Array.from(menu.children).forEach(child=>{
+    if(child!==host) child.style.display=selectedCustomCategory?'none':'';
+  });
+  if(selectedCustomCategory && host.parentNode===menu) menu.insertBefore(host,menu.firstChild);
   const signature=JSON.stringify([selectedCustomCategory,cats.map(cat=>[
     cat,
     items.filter(x=>String(x.category||'MY ITEMS / আমার আইটেম').trim()===cat)
