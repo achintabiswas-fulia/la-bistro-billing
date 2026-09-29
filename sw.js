@@ -1,5 +1,5 @@
-const CACHE='la-bistro-billing-v84';
-const V='84';
+const CACHE='la-bistro-billing-v85';
+const V='85';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-save-fix.js','./lb-history-actions.js','./lb-delete-action.js','./lb-force-delete.js','./lb-customer-whatsapp.js','./lb-customer-fix.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(x=>x+'?v='+V))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
