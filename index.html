@@ -140,22 +140,44 @@ async function bluetoothPrinter(){
  try{const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['000018f0-0000-1000-8000-00805f9b34fb']});alert('Printer selected: '+d.name+'\nNative Android ESC/POS printing will be used for the final version.')}catch(e){if(e.name!=='NotFoundError')alert('Printer connection cancelled or unavailable.')}
 }
 
-const savedLogo = localStorage.getItem('laBistroLogo');
+const savedLogo = localStorage.getItem('laBistroLogo') || localStorage.getItem('la_bistro_logo');
 if(savedLogo){ document.querySelector('.logo').src=savedLogo; }
 
 function openLogoPicker(){
-  document.getElementById('logoPicker').click();
+  const picker=document.getElementById('logoPicker');
+  if(picker){ picker.value=''; picker.click(); }
 }
 function changeLogo(event){
   const file=event.target.files && event.target.files[0];
   if(!file)return;
+  if(!file.type || !file.type.startsWith('image/')){
+    alert('Please select an image / একটি ছবি নির্বাচন করুন');
+    return;
+  }
   const reader=new FileReader();
   reader.onload=function(e){
-    const data=e.target.result;
-    document.querySelector('.logo').src=data;
-    localStorage.setItem('laBistroLogo',data);
-    alert('Logo updated / লোগো পরিবর্তন হয়েছে');
+    const img=new Image();
+    img.onload=function(){
+      const max=900, scale=Math.min(1,max/Math.max(img.width,img.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(img.width*scale));
+      canvas.height=Math.max(1,Math.round(img.height*scale));
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const data=canvas.toDataURL('image/jpeg',0.82);
+      document.querySelector('.logo').src=data;
+      try{
+        localStorage.setItem('laBistroLogo',data);
+        localStorage.setItem('la_bistro_logo',data);
+        alert('Logo updated / লোগো পরিবর্তন হয়েছে');
+      }catch(err){
+        alert('Logo is too large for this phone browser. Please choose a smaller image / লোগোটি খুব বড়। ছোট ছবি নির্বাচন করুন');
+      }
+    };
+    img.onerror=function(){alert('Could not read this image / ছবিটি পড়া যাচ্ছে না');};
+    img.src=e.target.result;
   };
+  reader.onerror=function(){alert('Could not open this image / ছবিটি খোলা যাচ্ছে না');};
   reader.readAsDataURL(file);
 }
 
