@@ -61,8 +61,8 @@ function snapshot(){
   const discount=Math.min(subtotal,subtotal*dp/100);
   const gp=Math.max(0,Number($('gst')?.value||$('freshGst')?.value||0)||0);
   const gst=Math.max(0,subtotal-discount)*gp/100;
-  const customer=String($('v69Name')?.value||'').trim()||'Customer';
-  const ph=String($('v69Phone')?.value||'').trim();
+  const customer=String($('v69Name')?.value||$('customer')?.value||'').trim()||'Customer';
+  const ph=String($('v69Phone')?.value||$('customerPhone')?.value||'').trim();
   const payment=String(document.querySelector('.payment.active')?.textContent||'Cash').split('/')[0].trim()||'Cash';
   return{id:'LB-'+Date.now().toString(36).toUpperCase(),customer,phone:ph,items,subtotal,discount,gst,total:Math.max(0,subtotal-discount)+gst,payment};
  }catch(e){console.error(e);return null}
