@@ -120,7 +120,7 @@ body,.app,header,.controls,.tabs,.layout,.menu-panel,.cart,
 
 <script src="lb-layout.js"></script>
 
-<script src="lb-customer-whatsapp.js"></script>
+<script src="lb-customer-whatsapp.js?v=76"></script>
 </body></html>`
 }
 function printReceipt(){if(!Object.keys(cart).length){alert('Add items first / আগে আইটেম যোগ করুন');return}const w=window.open('','_blank');w.document.write(receiptHtml());w.document.close();w.focus();setTimeout(()=>w.print(),300)}
@@ -179,5 +179,5 @@ renderTabs();renderMenu();renderCart();
 
 <script src="lb-layout.js"></script>
 
-<script src="lb-customer-whatsapp.js"></script>
+<script src="lb-customer-whatsapp.js?v=76"></script>
 </body></html>
