@@ -157,8 +157,9 @@
     });
 
     if(window.__lbSelectedCustomCategory){
-      const current=document.querySelector('.lbCustomActiveSection[data-category]');
-      if(!current || current.dataset.category!==window.__lbSelectedCustomCategory) showCustomCategory(window.__lbSelectedCustomCategory);
+      showCustomCategory(window.__lbSelectedCustomCategory);
+    }else{
+      renderCustomSectionsAfterBase();
     }
   }
 
