@@ -26,9 +26,24 @@
     return out;
   }
 
+  function getCustomPanel(){
+    let p=document.getElementById('lbCustomPanel');
+    if(p)return p;
+    const tabs=document.getElementById('tabs');
+    if(!tabs)return null;
+    p=document.createElement('main');
+    p.id='lbCustomPanel';
+    p.className='menu-panel';
+    p.style.display='none';
+    tabs.parentNode.insertBefore(p,tabs.nextSibling);
+    return p;
+  }
+
   function showCustomCategory(cat){
-    const panel=document.getElementById('menuPanel'); if(!panel)return;
+    const panel=getCustomPanel(); if(!panel)return;
+    const base=document.getElementById('menuPanel');
     window.__lbSelectedCustomCategory=cat;
+    const group=customItems().filter(x=>normalizeCategory(x.category)===cat);
     panel.innerHTML='';
     const sec=document.createElement('section');
     sec.className='lbCustomSection lbCustomActiveSection';
@@ -38,8 +53,6 @@
     title.textContent=cat;
     const grid=document.createElement('div');
     grid.className='grid';
-    const group=customItems().filter(x=>normalizeCategory(x.category)===cat);
-
     group.forEach(x=>{
       const card=document.createElement('div');
       card.className='item lbCustomItem';
@@ -48,28 +61,29 @@
       card.querySelector('.en').textContent=x.en||'';
       card.querySelector('.bn').textContent=x.bn||'';
       card.onclick=()=>{
-        try{
-          const key='custom::'+x.en+'|'+x.bn;
-          window.cart=window.cart||{};
-          window.cart[key]={item:[x.en,x.bn,Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
-          window.renderCart?.();
-        }catch(e){}
+        const key='custom::'+x.id;
+        window.cart=window.cart||{};
+        window.cart[key]={item:[x.en,x.bn,Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
+        window.renderCart?.();
       };
       grid.appendChild(card);
     });
-
     if(!group.length){
       const empty=document.createElement('div');
       empty.className='empty';
       empty.textContent='No items yet / এখনও কোনো আইটেম নেই';
       grid.appendChild(empty);
     }
-    sec.appendChild(title); sec.appendChild(grid); panel.appendChild(sec);
+    sec.appendChild(title);
+    sec.appendChild(grid);
+    panel.appendChild(sec);
+    if(base)base.style.display='none';
+    panel.style.display='block';
     document.querySelectorAll('.tabs .lbCustomTab').forEach(b=>{
       b.classList.toggle('active',b.dataset.category===cat);
     });
-    // Keep the page position stable. Do not auto-scroll or animate the panel.
   }
+
 
   function installCustomTabTapHandler(){
     if(window.__lbCustomTabTapHandler)return;
@@ -93,6 +107,11 @@
   }
 
   function renderCategories(){
+    const customPanel=document.getElementById('lbCustomPanel');
+    if(!window.__lbSelectedCustomCategory && customPanel)customPanel.style.display='none';
+    const basePanel=document.getElementById('menuPanel');
+    if(!window.__lbSelectedCustomCategory && basePanel)basePanel.style.display='';
+
     const tabsHost=document.getElementById('tabs')||document.querySelector('.tabs');
     if(!tabsHost)return;
 
@@ -163,6 +182,8 @@
         .billing-customer-fields{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;margin:0 0 9px!important;padding:0!important}
         .billing-customer-fields input{width:100%!important;min-width:0!important;background:#fff!important;color:#111!important;border:1px solid #bbb!important;border-radius:8px!important;padding:9px!important}
         .lbCustomActiveSection{display:block!important}
+        #lbCustomPanel{display:block!important;margin:0!important;width:100%!important}
+        #lbCustomPanel .grid{display:grid!important}
       }`;
       document.head.appendChild(style);
     }
@@ -185,6 +206,19 @@
   }
 
   function hookCanonicalMenu(){
+    if(typeof window.renderMenu==='function' && !window.__lbCanonicalMenuHookedForCustomPanel){
+      const original=window.renderMenu;
+      window.renderMenu=function(){
+        window.__lbSelectedCustomCategory=null;
+        const out=original.apply(this,arguments);
+        const cp=document.getElementById('lbCustomPanel'); if(cp)cp.style.display='none';
+        const bp=document.getElementById('menuPanel'); if(bp)bp.style.display='';
+        setTimeout(renderCategories,0);
+        return out;
+      };
+      window.__lbCanonicalMenuHookedForCustomPanel=true;
+      return;
+    }
     if(window.__lbCustomCategoryRenderWrapped||typeof window.renderMenu!=='function')return;
     const original=window.renderMenu;
     window.renderMenu=function(){
