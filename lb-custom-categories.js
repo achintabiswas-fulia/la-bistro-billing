@@ -1,7 +1,7 @@
 /* La Bistro — custom category/item refresh fix. Billing logic is untouched. */
 (()=>{'use strict';
 const refresh=()=>{try{window.renderCustomMenuItems?.()}catch(e){console.error('Custom menu refresh:',e)}};
-const refreshAfterTab=()=>{refresh();setTimeout(refresh,0);setTimeout(refresh,80);setTimeout(refresh,250)};
+const refreshAfterTab=(e)=>{if(e?.target?.closest?.('.lbCustomTab'))return;refresh();setTimeout(refresh,0);setTimeout(refresh,80);setTimeout(refresh,250)};
 const bind=()=>{
   document.querySelectorAll('.tabs .tab').forEach(t=>{
     if(t.dataset.lbCustomRefreshBound)return;
