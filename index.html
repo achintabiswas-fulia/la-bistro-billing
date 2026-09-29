@@ -62,11 +62,11 @@ function money(n){return '₹'+Number(n).toFixed(0)}
 function allItems(){return MENU.flatMap(x=>x[1])}
 function key(it){return it[0]+'|'+it[1]+'|'+it[2]}
 function findItem(k){return allItems().find(x=>key(x)===k)}
-function renderTabs(){document.getElementById('tabs').innerHTML=MENU.map((c,i)=>`<button class="tab ${i===activeCategory?'active':''}" onclick="activeCategory=${i};renderTabs();renderMenu()">${c[0]}</button>`).join('')}
+function renderTabs(){document.getElementById('tabs').innerHTML=MENU.map((c,i)=>`<button class="tab ${i===activeCategory?'active':''}" onclick="activeCategory=${i};renderTabs();renderMenu()">${c[0]}</button>`).join('');window.lbRenderCategories?.()}
 function renderMenu(){
  const q=document.getElementById('search').value.trim().toLowerCase();
  const cats=q?MENU.map(x=>[x[0],x[1].filter(it=>(it[0]+' '+it[1]).toLowerCase().includes(q))]).filter(x=>x[1].length):[MENU[activeCategory]];
- document.getElementById('menuPanel').innerHTML=cats.map(c=>`<div class="category-title">${c[0]}</div><div class="grid">${c[1].map(it=>{const k=key(it),qty=cart[k]?.qty||0;return `<button class="item ${qty?'selected':''}" onclick="addItem('${encodeURIComponent(k)}')"><span class="qty">${qty}</span><div class="en">${it[0]}</div><div class="bn">${it[1]}</div><div class="price">${money(it[2])}</div></button>`}).join('')}</div>`).join('')
+ document.getElementById('menuPanel').innerHTML=cats.map(c=>`<div class="category-title">${c[0]}</div><div class="grid">${c[1].map(it=>{const k=key(it),qty=cart[k]?.qty||0;return `<button class="item ${qty?'selected':''}" onclick="addItem('${encodeURIComponent(k)}')"><span class="qty">${qty}</span><div class="en">${it[0]}</div><div class="bn">${it[1]}</div><div class="price">${money(it[2])}</div></button>`}).join('')}</div>`).join('');window.lbRenderCategories?.()
 }
 function addItem(encoded){const k=decodeURIComponent(encoded),it=findItem(k);if(!it)return;if(!cart[k])cart[k]={item:it,qty:0};cart[k].qty++;renderMenu();renderCart()}
 function changeQty(encoded,d){const k=decodeURIComponent(encoded);if(!cart[k])return;cart[k].qty+=d;if(cart[k].qty<=0)delete cart[k];renderMenu();renderCart()}
