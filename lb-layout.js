@@ -133,18 +133,24 @@ function renderCategories(){
 
       /* HARD BLOCK: custom card itself must never add an item.
          Only the actual − and + symbol boxes are allowed to change quantity. */
-      card.style.pointerEvents='none';
+      /* Keep the card itself passive. Only the two symbol buttons receive input. */
+      card.style.pointerEvents='auto';
       controls.style.pointerEvents='auto';
-      minus.style.pointerEvents='auto';
-      plus.style.pointerEvents='auto';
-      minus.addEventListener('click',e=>{
-        e.preventDefault();
-        e.stopPropagation();
-      },true);
-      plus.addEventListener('click',e=>{
-        e.preventDefault();
-        e.stopPropagation();
-      },true);
+      const stopCard=e=>{e.preventDefault();e.stopPropagation();};
+      card.addEventListener('click',e=>{
+        if(!e.target.closest('.lbCustomMinus,.lbCustomPlus')) stopCard(e);
+      });
+      const bindQtyButton=(btn,delta)=>{
+        const act=e=>{
+          e.preventDefault();
+          e.stopPropagation();
+          setQty(getQty()+delta);
+        };
+        btn.onclick=act;
+        btn.ontouchend=act;
+      };
+      bindQtyButton(minus,-1);
+      bindQtyButton(plus,1);
 
       card.append(controls,en,bn,price);
 
