@@ -47,49 +47,55 @@
   function showCustomCategory(cat){
     const panel=getCustomPanel(); if(!panel)return;
     const base=document.getElementById('menuPanel');
-    window.__lbSelectedCustomCategory=cat;
     const wanted=String(cat||'').trim();
-    const group=customItems().filter(x=>normalizeCategory(x.category).trim()===wanted);
+    let items=customItems();
+    if(!items.length){
+      try{const raw=JSON.parse(localStorage.getItem('lb_custom_menu_v2')||'[]');if(Array.isArray(raw))items=raw}catch(e){}
+    }
+    const group=items.filter(x=>normalizeCategory(x.category).trim()===wanted);
     panel.innerHTML='';
-    const sec=document.createElement('section');
-    sec.className='lbCustomSection lbCustomActiveSection';
-    sec.dataset.category=cat;
     const title=document.createElement('div');
     title.className='category-title';
-    title.textContent=cat;
+    title.textContent=wanted;
+    panel.appendChild(title);
     const grid=document.createElement('div');
     grid.className='grid';
+    grid.style.cssText='display:grid!important;visibility:visible!important;opacity:1!important;';
     group.forEach(x=>{
-      const card=document.createElement('div');
+      const card=document.createElement('button');
+      card.type='button';
       card.className='item lbCustomItem';
-      card.innerHTML=(x.image?'<img class="lbCustomImg" src="'+x.image+'" alt="">':'')+
-        '<div class="en"></div><div class="bn"></div><div class="price">₹'+Number(x.price||0).toFixed(0)+'</div>';
-      card.querySelector('.en').textContent=x.en||'';
-      card.querySelector('.bn').textContent=x.bn||'';
+      card.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;';
+      const en=document.createElement('div'); en.className='en'; en.textContent=x.en||'';
+      const bn=document.createElement('div'); bn.className='bn'; bn.textContent=x.bn||'';
+      const price=document.createElement('div'); price.className='price'; price.textContent='₹'+Number(x.price||0).toFixed(0);
+      card.appendChild(en); card.appendChild(bn); card.appendChild(price);
+      if(x.image){
+        const img=document.createElement('img'); img.className='lbCustomImg'; img.src=x.image; img.alt=''; card.insertBefore(img,en);
+      }
       card.onclick=()=>{
-        const key='custom::'+x.id;
+        const key='custom::'+(x.id||((x.en||'')+'|'+(x.bn||'')));
         window.cart=window.cart||{};
-        window.cart[key]={item:[x.en,x.bn,Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
+        window.cart[key]={item:[x.en||'',x.bn||'',Number(x.price||0)],qty:(window.cart[key]?.qty||0)+1};
         window.renderCart?.();
       };
       grid.appendChild(card);
     });
     if(!group.length){
       const empty=document.createElement('div');
-      empty.className='empty';
-      empty.textContent='No items yet / এখনও কোনো আইটেম নেই';
+      empty.style.cssText='display:block!important;padding:20px;text-align:center;color:#111;background:#fff;border:1px solid #ddd;border-radius:8px;';
+      empty.textContent='No saved items found / কোনো সেভ করা আইটেম পাওয়া যায়নি';
       grid.appendChild(empty);
     }
-    sec.appendChild(title);
-    sec.appendChild(grid);
-    panel.appendChild(sec);
+    panel.appendChild(grid);
+    window.__lbSelectedCustomCategory=wanted;
     if(base)base.style.display='none';
     panel.style.display='block';
-    document.querySelectorAll('.tabs .lbCustomTab').forEach(b=>{
-      b.classList.toggle('active',b.dataset.category===cat);
+    panel.hidden=false;
+    document.querySelectorAll('.tabs .lbCustomTab').forEach(btn=>{
+      btn.classList.toggle('active',String(btn.dataset.category||'').trim()===wanted);
     });
   }
-
 
   function installCustomTabTapHandler(){
     if(window.__lbCustomTabTapHandler)return;
