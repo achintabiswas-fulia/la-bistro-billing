@@ -34,13 +34,14 @@
   function getCustomPanel(){
     let p=document.getElementById('lbCustomPanel');
     if(p)return p;
-    const tabs=document.getElementById('tabs');
-    if(!tabs)return null;
+    const layout=document.querySelector('.layout');
+    const base=document.getElementById('menuPanel');
+    if(!layout)return null;
     p=document.createElement('main');
     p.id='lbCustomPanel';
     p.className='menu-panel';
     p.style.display='none';
-    tabs.parentNode.insertBefore(p,tabs.nextSibling);
+    if(base)layout.insertBefore(p,base); else layout.insertBefore(p,layout.firstChild);
     return p;
   }
 
@@ -194,10 +195,10 @@
         .billing-customer-fields{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;margin:0 0 9px!important;padding:0!important}
         .billing-customer-fields input{width:100%!important;min-width:0!important;background:#fff!important;color:#111!important;border:1px solid #bbb!important;border-radius:8px!important;padding:9px!important}
         .lbCustomActiveSection{display:block!important}
-        #lbCustomPanel{display:block!important;margin:0!important;width:100%!important;max-height:none!important;overflow:visible!important}
+        #lbCustomPanel{display:block!important;margin:0!important;width:100%!important;max-height:none!important;min-height:1px!important;overflow:visible!important;grid-column:1 / -1!important}
         #lbCustomPanel .lbCustomSection{display:block!important}
         #lbCustomPanel .grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;overflow:visible!important}
-        #lbCustomPanel .item{display:block!important;visibility:visible!important;opacity:1!important}
+        #lbCustomPanel .item{display:block!important;visibility:visible!important;opacity:1!important;min-height:110px!important}
       }`;
       document.head.appendChild(style);
     }
