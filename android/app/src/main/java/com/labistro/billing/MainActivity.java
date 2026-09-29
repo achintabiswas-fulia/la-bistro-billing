@@ -1,17 +1,51 @@
 package com.labistro.billing;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.graphics.Color;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.UUID;
 
 public class MainActivity extends Activity {
+    private static final int BT_REQ = 9001;
+    private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final int PAPER_DOTS = 384;
     private WebView web;
+    private SharedPreferences prefs;
+    private String pendingPrint = null;
+
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        prefs = getSharedPreferences("la_bistro_printer", MODE_PRIVATE);
         web = new WebView(this);
         web.setBackgroundColor(Color.WHITE);
         WebSettings s = web.getSettings();
@@ -21,15 +55,233 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
         s.setSupportZoom(false);
+        web.addJavascriptInterface(new PrinterBridge(), "AndroidPrinter");
         web.setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return false;
-            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return false; }
         });
         setContentView(web);
         web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android");
     }
-    @Override public void onBackPressed() {
-        if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+
+    private boolean hasBtPermission() {
+        return Build.VERSION.SDK_INT < 31 || checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
     }
+
+    private void requestBtPermission(String printPayload) {
+        pendingPrint = printPayload;
+        if (Build.VERSION.SDK_INT >= 31) requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, BT_REQ);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != BT_REQ) return;
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (pendingPrint != null) { String p = pendingPrint; pendingPrint = null; printWithSavedPrinter(p); }
+            else showPrinterPicker();
+        } else toast("Bluetooth permission is required for the printer.");
+    }
+
+    private BluetoothAdapter adapter() { return BluetoothAdapter.getDefaultAdapter(); }
+
+    private void showPrinterPicker() {
+        if (!hasBtPermission()) { requestBtPermission(null); return; }
+        BluetoothAdapter a = adapter();
+        if (a == null) { toast("This phone does not support Bluetooth."); return; }
+        if (!a.isEnabled()) {
+            startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
+            toast("Turn on Bluetooth, then open Printer Settings again.");
+            return;
+        }
+        Set<BluetoothDevice> bonded = a.getBondedDevices();
+        if (bonded == null || bonded.isEmpty()) {
+            startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
+            toast("Pair the La Bistro 58mm printer once, then select it here.");
+            return;
+        }
+        final ArrayList<BluetoothDevice> devices = new ArrayList<>(bonded);
+        String[] names = new String[devices.size()];
+        for (int i = 0; i < devices.size(); i++) {
+            BluetoothDevice d = devices.get(i);
+            String n = d.getName();
+            names[i] = (n == null || n.trim().isEmpty() ? "Bluetooth printer" : n) + "\n" + d.getAddress();
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Select La Bistro Printer")
+                .setItems(names, (dialog, which) -> {
+                    BluetoothDevice d = devices.get(which);
+                    prefs.edit().putString("printer_mac", d.getAddress()).putString("printer_name", d.getName() == null ? "Bluetooth printer" : d.getName()).apply();
+                    toast("Printer saved: " + (d.getName() == null ? d.getAddress() : d.getName()));
+                    web.evaluateJavascript("window.onNativePrinterReady&&window.onNativePrinterReady(" + JSONObject.quote(d.getName() == null ? d.getAddress() : d.getName()) + ")", null);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void printWithSavedPrinter(String payload) {
+        if (!hasBtPermission()) { requestBtPermission(payload); return; }
+        String mac = prefs.getString("printer_mac", "");
+        if (mac.isEmpty()) { showPrinterPicker(); return; }
+        new Thread(() -> {
+            try {
+                JSONObject o = new JSONObject(payload);
+                Bitmap receipt = buildReceipt(o);
+                byte[] bytes = bitmapToEscPos(receipt);
+                int copies = Math.max(1, Math.min(3, o.optInt("copies", 1)));
+                BluetoothAdapter a = adapter();
+                BluetoothDevice d = a.getRemoteDevice(mac);
+                if (a.isDiscovering()) a.cancelDiscovery();
+                BluetoothSocket socket;
+                try {
+                    socket = d.createRfcommSocketToServiceRecord(SPP_UUID);
+                    socket.connect();
+                } catch (Exception first) {
+                    socket = d.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
+                    socket.connect();
+                }
+                OutputStream out = socket.getOutputStream();
+                for (int copy = 0; copy < copies; copy++) {
+                    int pos = 0;
+                    while (pos < bytes.length) {
+                        int n = Math.min(4096, bytes.length - pos);
+                        out.write(bytes, pos, n);
+                        out.flush();
+                        pos += n;
+                        try { Thread.sleep(8); } catch (InterruptedException ignored) {}
+                    }
+                }
+                try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+                out.close();
+                socket.close();
+                final String name = prefs.getString("printer_name", "La Bistro Printer");
+                runOnUiThread(() -> toast("Printed on " + name));
+            } catch (Exception e) {
+                runOnUiThread(() -> toast("Printer connection failed. Check that the 58mm printer is ON and paired."));
+            }
+        }).start();
+    }
+
+    private Bitmap decodeData(String data) {
+        try {
+            if (data == null || data.isEmpty()) return null;
+            int comma = data.indexOf(',');
+            String b64 = comma >= 0 ? data.substring(comma + 1) : data;
+            byte[] raw = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+            return BitmapFactory.decodeByteArray(raw, 0, raw.length);
+        } catch (Exception e) { return null; }
+    }
+
+    private void drawText(Canvas c, String text, float[] yRef, float size, boolean bold, boolean center) {
+        TextPaint p = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(Color.BLACK);
+        p.setTextSize(size);
+        p.setTypeface(android.graphics.Typeface.create("sans-serif", bold ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+        p.setTextAlign(Paint.Align.LEFT);
+        int width = PAPER_DOTS - 24;
+        Layout.Alignment alignment = center ? Layout.Alignment.ALIGN_CENTER : Layout.Alignment.ALIGN_NORMAL;
+        StaticLayout sl = new StaticLayout(text == null ? "" : text, p, width, alignment, 1.0f, 0f, false);
+        c.save();
+        c.translate(12, yRef[0]);
+        sl.draw(c);
+        c.restore();
+        yRef[0] += sl.getHeight() + 5;
+    }
+
+    private Bitmap buildReceipt(JSONObject o) throws Exception {
+        Bitmap b = Bitmap.createBitmap(PAPER_DOTS, 6000, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        c.drawColor(Color.WHITE);
+        float[] y = {10};
+        Bitmap logo = decodeData(o.optString("logo", ""));
+        if (logo != null) {
+            float maxW = 220, maxH = 160, scale = Math.min(maxW / logo.getWidth(), maxH / logo.getHeight());
+            if (scale > 1) scale = 1;
+            float w = logo.getWidth() * scale, h = logo.getHeight() * scale;
+            c.drawBitmap(logo, null, new RectF((PAPER_DOTS-w)/2f, y[0], (PAPER_DOTS+w)/2f, y[0]+h), new Paint(Paint.ANTI_ALIAS_FLAG));
+            y[0] += h + 8;
+        }
+        drawText(c, "LA BISTRO", y, 28, true, true);
+        drawText(c, "NH 12 Fulia, Nadia\nPhone: 7811838548", y, 17, true, true);
+        drawText(c, o.optString("orderType", "Dine In") + " • " + o.optString("table", "-"), y, 15, false, true);
+        drawText(c, o.optString("date", "") + "\n" + o.optString("id", ""), y, 14, false, true);
+        Paint line = new Paint();
+        line.setColor(Color.BLACK);
+        line.setStrokeWidth(2);
+        c.drawLine(10, y[0], PAPER_DOTS-10, y[0], line);
+        y[0] += 8;
+
+        JSONArray items = o.optJSONArray("items");
+        if (items != null) for (int i = 0; i < items.length(); i++) {
+            JSONObject x = items.getJSONObject(i);
+            String name = x.optString("en", "") + (x.optString("bn", "").isEmpty() ? "" : "\n" + x.optString("bn", ""));
+            String row = x.optInt("qty", 0) + " x " + name + "   ₹" + String.format(java.util.Locale.US, "%.2f", x.optDouble("lineTotal", 0));
+            drawText(c, row, y, 16, false, false);
+            c.drawLine(10, y[0], PAPER_DOTS-10, y[0], line);
+            y[0] += 4;
+        }
+        drawText(c, "Subtotal: ₹" + String.format(java.util.Locale.US, "%.2f", o.optDouble("subtotal", 0)), y, 16, false, false);
+        drawText(c, "Discount (" + o.optDouble("discountPct", 0) + "%): -₹" + String.format(java.util.Locale.US, "%.2f", o.optDouble("discount", 0)), y, 16, false, false);
+        drawText(c, "GST (" + o.optDouble("taxRate", 0) + "%): ₹" + String.format(java.util.Locale.US, "%.2f", o.optDouble("tax", 0)), y, 16, false, false);
+        drawText(c, "TOTAL: ₹" + String.format(java.util.Locale.US, "%.2f", o.optDouble("total", 0)), y, 23, true, false);
+        drawText(c, "Customer: " + o.optString("customer", "") + "\nPayment: " + o.optString("payment", "Cash"), y, 15, false, false);
+        String msg = o.optString("message", "").trim();
+        if (!msg.isEmpty()) drawText(c, msg, y, 15, false, true);
+        Bitmap qr = decodeData(o.optString("qr", ""));
+        if (qr != null) {
+            float sz = 170, scale = Math.min(sz / qr.getWidth(), sz / qr.getHeight());
+            float w = qr.getWidth() * scale, h = qr.getHeight() * scale;
+            c.drawBitmap(qr, null, new RectF((PAPER_DOTS-w)/2f, y[0], (PAPER_DOTS+w)/2f, y[0]+h), new Paint(Paint.ANTI_ALIAS_FLAG));
+            y[0] += h + 5;
+            drawText(c, "Scan to pay / পেমেন্ট স্ক্যান করুন", y, 13, false, true);
+        }
+        drawText(c, "Thank you / ধন্যবাদ", y, 17, true, true);
+        int h = (int)Math.min(6000, Math.max(100, y[0] + 30));
+        Bitmap out = Bitmap.createBitmap(PAPER_DOTS, h, Bitmap.Config.ARGB_8888);
+        new Canvas(out).drawBitmap(b, 0, 0, null);
+        b.recycle();
+        return out;
+    }
+
+    private byte[] bitmapToEscPos(Bitmap bmp) throws Exception {
+        int w = bmp.getWidth(), h = bmp.getHeight();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(new byte[]{0x1B, 0x40});
+        for (int y = 0; y < h; y += 24) {
+            int bandH = Math.min(24, h - y);
+            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(w & 255), (byte)((w >> 8) & 255)});
+            for (int x = 0; x < w; x += 8) {
+                for (int bit = 0; bit < 24; bit++) {
+                    int v = 0;
+                    if (bit < bandH) {
+                        for (int k = 0; k < 8; k++) {
+                            int px = x + k;
+                            if (px < w) {
+                                int col = bmp.getPixel(px, y + bit);
+                                int gray = (Color.red(col)*299 + Color.green(col)*587 + Color.blue(col)*114)/1000;
+                                if (gray < 180) v |= (1 << (7-k));
+                            }
+                        }
+                    }
+                    out.write(v);
+                }
+            }
+            out.write(0x0A);
+        }
+        out.write(new byte[]{0x1B, 0x64, 0x03});
+        return out.toByteArray();
+    }
+
+    private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
+
+    public class PrinterBridge {
+        @JavascriptInterface public boolean isReady() { return !prefs.getString("printer_mac", "").isEmpty(); }
+        @JavascriptInterface public String printerName() { return prefs.getString("printer_name", ""); }
+        @JavascriptInterface public void setupPrinter() {
+            runOnUiThread(() -> { if (!hasBtPermission()) requestBtPermission(null); else showPrinterPicker(); });
+        }
+        @JavascriptInterface public void printReceipt(String payload) {
+            runOnUiThread(() -> { if (!hasBtPermission()) { requestBtPermission(payload); return; } printWithSavedPrinter(payload); });
+        }
+    }
+
+    @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
 }
