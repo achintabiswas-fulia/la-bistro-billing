@@ -117,11 +117,41 @@ function renderCategories(){
       plus.textContent='+';
       controls.append(minus,count,plus);
 
-      const getQty=()=>Number(window.lbFreshCustomGetQty?.(x.en||'',x.bn||'',Number(x.price||0))||0);
-      const setQty=q=>{ window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q); count.textContent=getQty(); };
+      const customKey=()=>String((x.en||'')+'||'+(x.bn||'')+'||'+Number(x.price||0));
+      const getQty=()=>{
+        try{
+          const fresh=window.__freshCart;
+          if(fresh){
+            const row=fresh[customKey()];
+            return Number(row?.qty||0);
+          }
+          return Number(window.lbFreshCustomGetQty?.(x.en||'',x.bn||'',Number(x.price||0))||0);
+        }catch(e){return 0}
+      };
+      const setQty=q=>{
+        q=Math.max(0,Math.floor(Number(q)||0));
+        try{
+          if(window.__freshCart){
+            const k=customKey();
+            if(q===0) delete window.__freshCart[k];
+            else window.__freshCart[k]={
+              en:String(x.en||''),
+              bn:String(x.bn||''),
+              price:Number(x.price||0),
+              key:k,
+              qty:q
+            };
+            window.renderFreshBill?.();
+            window.dispatchEvent(new CustomEvent('lb-custom-qty-changed'));
+          }else{
+            window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q);
+          }
+        }catch(e){}
+        count.textContent=getQty();
+      };
       count.textContent=getQty();
 
-      minus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(Math.max(0,getQty()-1));};
+      minus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()-1);};
       plus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()+1);};
       controls.onclick=e=>{e.preventDefault();e.stopPropagation();};
 
