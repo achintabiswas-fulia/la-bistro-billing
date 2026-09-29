@@ -151,14 +151,27 @@
       b.style.userSelect='none';
       b.style.webkitUserSelect='none';
       b.style.touchAction='manipulation';
+      b.style.pointerEvents='auto';
+      b.style.position='relative';
+      b.style.zIndex='1002';
       b.type='button';
       b.dataset.category=cat;
       b.textContent=cat.split('/')[0].trim();
+      const openCustom=()=>{
+        window.__lbSelectedCustomCategory=cat;
+        showCustomCategory(cat);
+        setTimeout(()=>showCustomCategory(cat),0);
+        setTimeout(()=>showCustomCategory(cat),80);
+      };
       b.onclick=(e)=>{
         e.preventDefault();
         e.stopPropagation();
-        window.__lbSelectedCustomCategory=cat;
-        showCustomCategory(cat);
+        openCustom();
+      };
+      b.onpointerup=(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        openCustom();
       };
       tabsHost.appendChild(b);
     });
@@ -233,6 +246,8 @@
       if(node.nodeType===Node.TEXT_NODE&&/function\\s+\\w+\\s*\\(|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=/.test(node.textContent||''))node.remove();
     });
     injectCategoryManager();
+    hookCanonicalMenu();
+    hookManagerRenderer();
     renderCategories();
   }
 
