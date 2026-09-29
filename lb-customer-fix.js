@@ -27,6 +27,7 @@ function style(){
  document.head.appendChild(s);
 }
 function build(){
+ if(document.getElementById('customer')&&document.getElementById('customerPhone')) return true;
  const cart=cartEl();if(!cart)return false;
  style();
  const {n,p}=hiddenFields();
