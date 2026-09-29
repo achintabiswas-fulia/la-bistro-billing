@@ -9,11 +9,12 @@
   }
   function saveCategories(a){localStorage.setItem('lb_categories_v1',JSON.stringify(a));}
   function allCategories(){const saved=(()=>{try{return JSON.parse(localStorage.getItem('lb_categories_v1')||'[]')}catch(e){return []}})();const names=[];const add=v=>{v=String(v||'').trim();if(v&&!names.includes(v))names.push(v);};saved.forEach(add);categoryNames().forEach(add);return names;}
+  function customCategoryNames(){const names=[];const add=v=>{v=String(v||'').trim();if(v&&!names.includes(v))names.push(v);};try{JSON.parse(localStorage.getItem('lb_categories_v1')||'[]').forEach(add);}catch(e){};(window.LB?.customItems||[]).forEach(x=>add(x.category));return names;}
   function renderCategories(){
     const panel=document.getElementById('menuPanel');const tabsHost=document.querySelector('.tabs');if(!panel)return;
     panel.querySelectorAll('.lbCustomSection').forEach(x=>x.remove());tabsHost?.querySelectorAll('.lbCustomTab').forEach(x=>x.remove());
     const items=window.LB?.customItems||[];
-    allCategories().forEach(cat=>{
+    customCategoryNames().forEach(cat=>{
       const sec=document.createElement('section');sec.className='lbCustomSection';sec.id='lbcat_'+btoa(unescape(encodeURIComponent(cat))).replace(/[^a-zA-Z0-9]/g,'');sec.style.scrollMarginTop='95px';
       sec.innerHTML='<div class="category-title"></div><div class="grid"></div>';sec.querySelector('.category-title').textContent=cat;
       const grid=sec.querySelector('.grid');const group=items.filter(x=>String(x.category||'').trim()===cat);
