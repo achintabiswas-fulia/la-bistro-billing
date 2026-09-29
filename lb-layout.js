@@ -157,10 +157,11 @@ function renderCategories(){
 
       card.append(controls,en,bn,price);
 
-      card.onclick=()=>{
-        try{
-          setQty(getQty()+1);
-        }catch(e){}
+      /* Custom item cards are display-only.
+         Quantity changes ONLY when the user presses the − or + boxes. */
+      card.onclick=e=>{
+        e.preventDefault();
+        e.stopPropagation();
       };
 
       grid.appendChild(card);
