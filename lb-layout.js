@@ -255,14 +255,10 @@
         if(searchEl && searchEl.value.trim()){
           window.__lbSelectedCustomCategory=null;
         }
-        const selected=window.__lbSelectedCustomCategory;
-        if(selected && !(searchEl && searchEl.value.trim())){
-          showCustomCategory(selected);
-          return;
-        }
         const out=original.apply(this,arguments);
         const cp=document.getElementById('lbCustomPanel'); if(cp)cp.style.display='none';
         const bp=document.getElementById('menuPanel'); if(bp)bp.style.display='';
+        renderCustomSectionsAfterBase();
         setTimeout(renderCategories,0);
         return out;
       };
