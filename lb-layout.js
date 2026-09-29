@@ -26,34 +26,14 @@
     const box=document.getElementById('lbContent');if(!box||box.querySelector('#lbCategoryControls'))return;const wrap=document.createElement('div');wrap.id='lbCategoryControls';wrap.style.cssText='border:1px solid #d4b25b;background:#fffaf0;border-radius:10px;padding:10px;margin:8px 0 14px';wrap.innerHTML='<b>📁 Add Category / ক্যাটাগরি যোগ করুন</b><div style="display:flex;gap:6px;margin-top:7px"><input id="lbNewCategory" class="lbInput" style="margin:0" placeholder="e.g. Desserts / ডেজার্ট"><button id="lbAddCategoryBtn" class="lbPrimary">Add / যোগ</button></div><div class="lbHint" style="margin-top:5px">New category will appear as a new menu box at the end of the category bar.</div>';const h3=box.querySelector('h3');if(h3)h3.after(wrap);else box.prepend(wrap);document.getElementById('lbAddCategoryBtn').onclick=()=>{const input=document.getElementById('lbNewCategory');const name=(input.value||'').trim();if(!name)return alert('Enter a category name / ক্যাটাগরির নাম লিখুন');const cats=(()=>{try{return JSON.parse(localStorage.getItem('lb_categories_v1')||'[]')}catch(e){return []}})();if(cats.includes(name))return alert('Category already exists / ক্যাটাগরি আগে থেকেই আছে');cats.push(name);saveCategories(cats);input.value='';window.LB?.toast?.('Category added / ক্যাটাগরি যোগ হয়েছে');renderCategories();};
   }
   function injectCategoryManager(){if(typeof window.openLBManager!=='function'||window.__lbCategoryManagerWrapped)return;window.__lbCategoryManagerWrapped=true;const original=window.openLBManager;window.openLBManager=function(tab){original(tab);if(tab==='item')setTimeout(addCategoryControls,60)}}
-  function refreshCustomSections(){
-    const panel=document.getElementById('menuPanel');
-    if(!panel)return;
-    if(panel.querySelector('.lbCustomSection'))return;
-    renderCategories();
-  }
-  function watchCanonicalMenu(){
-    const panel=document.getElementById('menuPanel');
-    if(!panel||panel.__lbV51CustomWatch)return;
-    panel.__lbV51CustomWatch=true;
-    const observer=new MutationObserver(()=>{
-      clearTimeout(panel.__lbV51CustomTimer);
-      panel.__lbV51CustomTimer=setTimeout(refreshCustomSections,20);
-    });
-    observer.observe(panel,{childList:true});
-    window.__lbV51CustomObserver=observer;
-  }
-
   function applyMobileLayout(){
     if(!document.getElementById('lb-mobile-layout-style')){const style=document.createElement('style');style.id='lb-mobile-layout-style';style.textContent=`@media (max-width:560px){header{position:relative!important;top:auto!important;z-index:20!important;background:#fff!important}.tabs{position:sticky!important;top:0!important;z-index:1000!important;background:#fff!important}.billing-customer-fields{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;margin:0 0 9px!important;padding:0!important}.billing-customer-fields input{width:100%!important;min-width:0!important;background:#fff!important;color:#111!important;border:1px solid #bbb!important;border-radius:8px!important;padding:9px!important}}`;document.head.appendChild(style)}
     const cart=document.querySelector('.cart'),customer=document.getElementById('customer'),phone=document.getElementById('customerPhone');if(cart&&(customer||phone)){let box=cart.querySelector('.billing-customer-fields');if(!box){box=document.createElement('div');box.className='billing-customer-fields';const heading=cart.querySelector('h2');if(heading)heading.parentNode.insertBefore(box,heading);else cart.insertBefore(box,cart.firstChild)}if(customer&&customer.parentElement!==box)box.appendChild(customer);if(phone&&phone.parentElement!==box)box.appendChild(phone)}
-    Array.from(document.body.childNodes).forEach(node=>{if(node.nodeType===Node.TEXT_NODE&&/function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=/.test(node.textContent||''))node.remove()});injectCategoryManager();renderCategories();watchCanonicalMenu();
+    Array.from(document.body.childNodes).forEach(node=>{if(node.nodeType===Node.TEXT_NODE&&/function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=/.test(node.textContent||''))node.remove()});injectCategoryManager();renderCategories();
   }
   function loadSyncBridge(){if(document.querySelector('script[data-lb-sync-fix]'))return;const s=document.createElement('script');s.src='./lb-sync-fix.js?v=2';s.dataset.lbSyncFix='1';document.head.appendChild(s)}
   function loadSalesHistory(){if(document.querySelector('script[data-lb-sales-history]'))return;const s=document.createElement('script');s.src='./lb-sales-history.js?v=1';s.dataset.lbSalesHistory='1';document.head.appendChild(s)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyMobileLayout,{once:true});else applyMobileLayout();
-  window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();watchCanonicalMenu();loadSyncBridge();loadSalesHistory()},300));
-  window.addEventListener('lb-cloud-updated',()=>setTimeout(()=>{renderCategories();watchCanonicalMenu()},50));
-  setTimeout(()=>{renderCategories();watchCanonicalMenu()},1000);
+  window.addEventListener('load',()=>setTimeout(()=>{injectCategoryManager();renderCategories();loadSyncBridge();loadSalesHistory()},300));
   window.lbRenderCategories=renderCategories;
 })();
