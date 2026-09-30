@@ -278,7 +278,8 @@ public class MainActivity extends Activity {
         out.write(new byte[]{0x1B, 0x40});
         for (int y = 0; y < h; y += 24) {
             int bandH = Math.min(24, h - y);
-            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(w & 255), (byte)((w >> 8) & 255)});
+            int rowBytes = (w + 7) / 8;
+            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(rowBytes & 255), (byte)((rowBytes >> 8) & 255)});
             for (int x = 0; x < w; x += 8) {
                 for (int bit = 0; bit < 24; bit++) {
                     int v = 0;
