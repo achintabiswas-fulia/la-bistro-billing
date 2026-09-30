@@ -331,48 +331,51 @@ public class MainActivity extends Activity {
     }
 
     private byte[] bitmapToEscPos(Bitmap bmp) throws Exception {
-        int w = bmp.getWidth(), h = bmp.getHeight();
-        int rowBytes = (w + 7) / 8;
+        int w = bmp.getWidth();
+        int h = bmp.getHeight();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        // ESC/POS GS v 0 raster format:
-        // header -> width in bytes -> height in rows -> one byte for each
-        // group of 8 horizontal pixels, row by row.
+        // MPT-II is an older/cheap ESC/POS printer. Use the classic
+        // 24-dot column bit-image command (ESC * 33), which is widely
+        // supported by these printers. Each column is represented by
+        // three bytes = 24 vertical dots.
         out.write(new byte[]{0x1B, 0x40});
-        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1B, 0x33, 24});
+        out.write(new byte[]{0x1B, 0x55, 1}); // unidirectional mode
 
-        // Send in manageable vertical chunks. Each chunk contains complete
-        // rows in the exact raster order expected by 58mm ESC/POS printers.
-        final int CHUNK_ROWS = 128;
-        for (int y0 = 0; y0 < h; y0 += CHUNK_ROWS) {
-            int rows = Math.min(CHUNK_ROWS, h - y0);
+        for (int y0 = 0; y0 < h; y0 += 24) {
+            int bandH = Math.min(24, h - y0);
 
+            // ESC * 33, nL/nH = image width in dots (not bytes).
             out.write(new byte[]{
-                    0x1D, 0x76, 0x30, 0x00,
-                    (byte)(rowBytes & 0xFF), (byte)((rowBytes >> 8) & 0xFF),
-                    (byte)(rows & 0xFF), (byte)((rows >> 8) & 0xFF)
+                    0x1B, 0x2A, 33,
+                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)
             });
 
-            for (int y = y0; y < y0 + rows; y++) {
-                for (int xByte = 0; xByte < rowBytes; xByte++) {
+            // Column-major order required by ESC * 24-dot mode:
+            // x=0: 3 vertical bytes, x=1: 3 bytes, ... x=w-1.
+            for (int x = 0; x < w; x++) {
+                for (int plane = 0; plane < 3; plane++) {
                     int v = 0;
-                    for (int k = 0; k < 8; k++) {
-                        int x = xByte * 8 + k;
-                        if (x < w) {
-                            int col = bmp.getPixel(x, y);
+                    for (int bit = 0; bit < 8; bit++) {
+                        int yy = y0 + plane * 8 + bit;
+                        if (yy < y0 + bandH) {
+                            int col = bmp.getPixel(x, yy);
                             int gray = (Color.red(col) * 299
                                     + Color.green(col) * 587
                                     + Color.blue(col) * 114) / 1000;
-                            if (gray < 180) v |= (1 << (7 - k));
+                            if (gray < 180) v |= (1 << (7 - bit));
                         }
                     }
                     out.write(v);
                 }
             }
+            out.write(0x0A);
         }
 
-        out.write(new byte[]{0x1B, 0x61, 0x00});
-        out.write(new byte[]{0x1B, 0x64, 0x03});
+        out.write(new byte[]{0x1B, 0x32});
+        out.write(new byte[]{0x1B, 0x55, 0});
+        out.write(new byte[]{0x1B, 0x64, 3});
         return out.toByteArray();
     }
 
