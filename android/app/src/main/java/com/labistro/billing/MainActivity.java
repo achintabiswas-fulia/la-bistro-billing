@@ -125,7 +125,11 @@ public class MainActivity extends Activity {
     private void printWithSavedPrinter(String payload) {
         if (!hasBtPermission()) { requestBtPermission(payload); return; }
         String mac = prefs.getString("printer_mac", "");
-        if (mac.isEmpty()) { showPrinterPicker(); return; }
+        if (mac.isEmpty()) {
+            pendingPrint = payload;
+            showPrinterPicker();
+            return;
+        }
         new Thread(() -> {
             try {
                 JSONObject o = new JSONObject(payload);
@@ -135,13 +139,35 @@ public class MainActivity extends Activity {
                 BluetoothAdapter a = adapter();
                 BluetoothDevice d = a.getRemoteDevice(mac);
                 if (a.isDiscovering()) a.cancelDiscovery();
-                BluetoothSocket socket;
+                BluetoothSocket socket = null;
+                Exception last = null;
                 try {
                     socket = d.createRfcommSocketToServiceRecord(SPP_UUID);
                     socket.connect();
                 } catch (Exception first) {
-                    socket = d.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
-                    socket.connect();
+                    last = first;
+                    try {
+                        if (socket != null) socket.close();
+                    } catch (Exception ignored) {}
+                    try {
+                        socket = d.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
+                        socket.connect();
+                    } catch (Exception second) {
+                        last = second;
+                        try {
+                            if (socket != null) socket.close();
+                        } catch (Exception ignored) {}
+                        try {
+                            java.lang.reflect.Method m = d.getClass().getMethod("createRfcommSocket", int.class);
+                            socket = (BluetoothSocket)m.invoke(d, 1);
+                            socket.connect();
+                        } catch (Exception third) {
+                            last = third;
+                        }
+                    }
+                }
+                if (socket == null || !socket.isConnected()) {
+                    throw new Exception("Bluetooth printer connection failed", last);
                 }
                 OutputStream out = socket.getOutputStream();
                 for (int copy = 0; copy < copies; copy++) {
