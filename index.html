@@ -136,8 +136,12 @@ function sendWhatsAppBill(){
 }
 
 async function bluetoothPrinter(){
- if(!navigator.bluetooth){alert('Chrome cannot directly connect to many classic-Bluetooth thermal printers. The native Android version will support reliable 58mm/80mm ESC/POS Bluetooth printing.');return}
- try{const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['000018f0-0000-1000-8000-00805f9b34fb']});alert('Printer selected: '+d.name+'\nNative Android ESC/POS printing will be used for the final version.')}catch(e){if(e.name!=='NotFoundError')alert('Printer connection cancelled or unavailable.')}
+ if(window.AndroidPrinter&&typeof window.AndroidPrinter.setupPrinter==='function'){
+  window.AndroidPrinter.setupPrinter();
+  return
+ }
+ if(!navigator.bluetooth){alert('Bluetooth printer setup is available in the La Bistro Android app. Please use the APK.');return}
+ try{const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['000018f0-0000-1000-8000-00805f9b34fb']});alert('Printer selected: '+d.name)}catch(e){if(e.name!=='NotFoundError')alert('Printer connection cancelled or unavailable.')}
 }
 
 const savedLogo = localStorage.getItem('laBistroLogo') || localStorage.getItem('la_bistro_logo');
