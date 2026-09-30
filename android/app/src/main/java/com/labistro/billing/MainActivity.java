@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
         writeAscii(out, "GST (" + o.optDouble("taxRate", 0) + "%)       Rs " + money(o.optDouble("tax", 0)) + "\\n");
         out.write(new byte[]{0x1B, 0x45, 0x01});
         // Double-height only so TOTAL stays on one line on 58mm paper.
-        out.write(new byte[]{0x1D, 0x21, 0x01});
+        out.write(new byte[]{0x1D, 0x21, 0x10});
         writeAscii(out, "TOTAL: Rs " + money(o.optDouble("total", 0)) + "\\n");
         out.write(new byte[]{0x1D, 0x21, 0x00});
         out.write(new byte[]{0x1B, 0x45, 0x00});
@@ -379,7 +379,7 @@ public class MainActivity extends Activity {
         // Some payload strings contain escaped newline sequences (\\n).
         // Convert them to real control characters before sending to ESC/POS.
         if (s == null) s = "";
-        s = s.replace("\\\\n", "\n").replace("\\\\r", "\r").replace("\\\\t", "\t");
+        s = s.replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t");
         out.write(ascii(s).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
     }
 
