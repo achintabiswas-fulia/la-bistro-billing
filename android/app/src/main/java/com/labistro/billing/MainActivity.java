@@ -191,8 +191,7 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 JSONObject o = new JSONObject(payload);
-                Bitmap receipt = buildReceipt(o);
-                byte[] bytes = bitmapToEscPos(receipt);
+                byte[] bytes = textToEscPos(o);
                 int copies = Math.max(1, Math.min(3, o.optInt("copies", 1)));
                 BluetoothAdapter a = adapter();
                 BluetoothDevice d = a.getRemoteDevice(mac);
@@ -330,53 +329,62 @@ public class MainActivity extends Activity {
         return out;
     }
 
-    private byte[] bitmapToEscPos(Bitmap bmp) throws Exception {
-        int w = bmp.getWidth();
-        int h = bmp.getHeight();
+    private byte[] textToEscPos(JSONObject o) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-        // MPT-II is an older/cheap ESC/POS printer. Use the classic
-        // 24-dot column bit-image command (ESC * 33), which is widely
-        // supported by these printers. Each column is represented by
-        // three bytes = 24 vertical dots.
         out.write(new byte[]{0x1B, 0x40});
-        out.write(new byte[]{0x1B, 0x33, 24});
-        out.write(new byte[]{0x1B, 0x55, 1}); // unidirectional mode
-
-        for (int y0 = 0; y0 < h; y0 += 24) {
-            int bandH = Math.min(24, h - y0);
-
-            // ESC * 33, nL/nH = image width in dots (not bytes).
-            out.write(new byte[]{
-                    0x1B, 0x2A, 33,
-                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)
-            });
-
-            // Column-major order required by ESC * 24-dot mode:
-            // x=0: 3 vertical bytes, x=1: 3 bytes, ... x=w-1.
-            for (int x = 0; x < w; x++) {
-                for (int plane = 0; plane < 3; plane++) {
-                    int v = 0;
-                    for (int bit = 0; bit < 8; bit++) {
-                        int yy = y0 + plane * 8 + bit;
-                        if (yy < y0 + bandH) {
-                            int col = bmp.getPixel(x, yy);
-                            int gray = (Color.red(col) * 299
-                                    + Color.green(col) * 587
-                                    + Color.blue(col) * 114) / 1000;
-                            if (gray < 180) v |= (1 << (7 - bit));
-                        }
-                    }
-                    out.write(v);
-                }
-            }
-            out.write(0x0A);
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1B, 0x45, 0x01});
+        out.write(new byte[]{0x1D, 0x21, 0x11});
+        writeAscii(out, "LA BISTRO\\n");
+        out.write(new byte[]{0x1D, 0x21, 0x00});
+        writeAscii(out, "NH 12 Fulia, Nadia\\n");
+        writeAscii(out, "Phone: 7811838548\\n");
+        out.write(new byte[]{0x1B, 0x45, 0x00});
+        writeAscii(out, o.optString("orderType", "Dine In") + " / Table " + o.optString("table", "-") + "\\n");
+        writeAscii(out, o.optString("date", "") + "\\n");
+        writeAscii(out, o.optString("id", "") + "\\n");
+        writeAscii(out, "--------------------------------\\n");
+        out.write(new byte[]{0x1B, 0x61, 0x00});
+        JSONArray items = o.optJSONArray("items");
+        if (items != null) for (int i = 0; i < items.length(); i++) {
+            JSONObject x = items.getJSONObject(i);
+            String name = ascii(x.optString("en", ""));
+            int qty = x.optInt("qty", 0);
+            double line = x.optDouble("lineTotal", 0);
+            writeAscii(out, qty + " x " + name + "\\n");
+            writeAscii(out, "  " + name + "    Rs " + money(line) + "\\n");
         }
-
-        out.write(new byte[]{0x1B, 0x32});
-        out.write(new byte[]{0x1B, 0x55, 0});
-        out.write(new byte[]{0x1B, 0x64, 3});
+        writeAscii(out, "--------------------------------\\n");
+        writeAscii(out, "Subtotal       Rs " + money(o.optDouble("subtotal", 0)) + "\\n");
+        writeAscii(out, "Discount (" + o.optDouble("discountPct", 0) + "%) -Rs " + money(o.optDouble("discount", 0)) + "\\n");
+        writeAscii(out, "GST (" + o.optDouble("taxRate", 0) + "%)       Rs " + money(o.optDouble("tax", 0)) + "\\n");
+        out.write(new byte[]{0x1B, 0x45, 0x01});
+        out.write(new byte[]{0x1D, 0x21, 0x11});
+        writeAscii(out, "TOTAL: Rs " + money(o.optDouble("total", 0)) + "\\n");
+        out.write(new byte[]{0x1D, 0x21, 0x00});
+        out.write(new byte[]{0x1B, 0x45, 0x00});
+        String customer = ascii(o.optString("customer", ""));
+        if (!customer.isEmpty()) writeAscii(out, "Customer: " + customer + "\\n");
+        writeAscii(out, "Payment: " + ascii(o.optString("payment", "Cash")) + "\\n");
+        String msg = ascii(o.optString("message", "").trim());
+        if (!msg.isEmpty()) writeAscii(out, msg + "\\n");
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        writeAscii(out, "Thank you\\n--------------------------------\\n\\n\\n");
+        out.write(new byte[]{0x1B, 0x64, 0x03});
         return out.toByteArray();
+    }
+
+    private void writeAscii(ByteArrayOutputStream out, String s) throws Exception {
+        out.write(ascii(s).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
+    private String ascii(String s) {
+        if (s == null) return "";
+        return s.replaceAll("[^\\x20-\\x7E\\n\\r\\t]", "");
+    }
+
+    private String money(double v) {
+        return String.format(java.util.Locale.US, "%.2f", v);
     }
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
