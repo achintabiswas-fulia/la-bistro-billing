@@ -55,6 +55,8 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
         s.setSupportZoom(false);
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        web.clearCache(true);
         web.addJavascriptInterface(new PrinterBridge(), "AndroidPrinter");
         web.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
         web.setWebViewClient(new WebViewClient() {
@@ -65,7 +67,7 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android");
+        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android&v=76");
     }
 
     private boolean hasBtPermission() {
