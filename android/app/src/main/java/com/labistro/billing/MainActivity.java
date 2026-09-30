@@ -69,26 +69,39 @@ public class MainActivity extends Activity {
     }
 
     private boolean hasBtPermission() {
-        return Build.VERSION.SDK_INT < 31 || checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        if (Build.VERSION.SDK_INT < 31) return true;
+        return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void requestBtPermission(String printPayload) {
         pendingPrint = printPayload;
-        if (Build.VERSION.SDK_INT >= 31) requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, BT_REQ);
+        if (Build.VERSION.SDK_INT >= 31) {
+            requestPermissions(new String[]{
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+            }, BT_REQ);
+        }
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode != BT_REQ) return;
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        boolean ok = grantResults.length >= 2
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && grantResults[1] == PackageManager.PERMISSION_GRANTED;
+        if (ok) {
             if (pendingPrint != null) { String p = pendingPrint; pendingPrint = null; printWithSavedPrinter(p); }
             else showPrinterPicker();
-        } else toast("Bluetooth permission is required for the printer.");
+        } else {
+            toast("Bluetooth permission is required. Open App Settings and allow Nearby devices.");
+        }
     }
 
     private BluetoothAdapter adapter() { return BluetoothAdapter.getDefaultAdapter(); }
 
     private void showPrinterPicker() {
+        toast("Opening printer connection...");
         if (!hasBtPermission()) { requestBtPermission(null); return; }
         BluetoothAdapter a = adapter();
         if (a == null) { toast("This phone does not support Bluetooth."); return; }
@@ -100,7 +113,7 @@ public class MainActivity extends Activity {
         Set<BluetoothDevice> bonded = a.getBondedDevices();
         if (bonded == null || bonded.isEmpty()) {
             startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
-            toast("Pair the La Bistro 58mm printer once, then select it here.");
+            toast("Pair MPT-II first, then return to La Bistro and press BLUETOOTH again.");
             return;
         }
         final ArrayList<BluetoothDevice> devices = new ArrayList<>(bonded);
