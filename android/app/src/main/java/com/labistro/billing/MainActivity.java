@@ -56,8 +56,13 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(false);
         s.setSupportZoom(false);
         web.addJavascriptInterface(new PrinterBridge(), "AndroidPrinter");
+        web.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return false; }
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                view.evaluateJavascript("(function(){window.__LB_NATIVE_ANDROID=true;window.__LB_NATIVE_PRINT=function(){try{if(window.LB&&window.LB.saveSale){window.LB.saveSale(true);return 'native-print-requested'}}catch(e){}return 'native-print-failed'}})()", null);
+            }
         });
         setContentView(web);
         web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android");
