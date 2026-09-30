@@ -192,10 +192,6 @@ public class MainActivity extends Activity {
             try {
                 JSONObject o = new JSONObject(payload);
                 Bitmap receipt = buildReceipt(o);
-                if (printViaFreePrintService(o, receipt)) {
-                    receipt.recycle();
-                    return;
-                }
                 byte[] bytes = bitmapToEscPos(receipt);
                 int copies = Math.max(1, Math.min(3, o.optInt("copies", 1)));
                 BluetoothAdapter a = adapter();
@@ -336,30 +332,46 @@ public class MainActivity extends Activity {
 
     private byte[] bitmapToEscPos(Bitmap bmp) throws Exception {
         int w = bmp.getWidth(), h = bmp.getHeight();
+        int rowBytes = (w + 7) / 8;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        // Use GS v 0 raster graphics. This is supported by generic 58mm
+        // ESC/POS printers and avoids code-page/Unicode problems because the
+        // whole receipt is sent as a bitmap.
         out.write(new byte[]{0x1B, 0x40});
-        for (int y = 0; y < h; y += 24) {
-            int bandH = Math.min(24, h - y);
-            int rowBytes = (w + 7) / 8;
-            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(rowBytes & 255), (byte)((rowBytes >> 8) & 255)});
-            for (int x = 0; x < w; x += 8) {
-                for (int bit = 0; bit < 24; bit++) {
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+
+        for (int y = 0; y < h; y += 8) {
+            int bandH = Math.min(8, h - y);
+            out.write(new byte[]{
+                    0x1D, 0x76, 0x30, 0x00,
+                    (byte)(rowBytes & 0xFF), (byte)((rowBytes >> 8) & 0xFF),
+                    (byte)(bandH & 0xFF), (byte)((bandH >> 8) & 0xFF)
+            });
+
+            for (int xByte = 0; xByte < rowBytes; xByte++) {
+                for (int bit = 0; bit < 8; bit++) {
+                    int px = xByte * 8;
+                    int py = y + bit;
                     int v = 0;
-                    if (bit < bandH) {
+                    if (py < h) {
                         for (int k = 0; k < 8; k++) {
-                            int px = x + k;
-                            if (px < w) {
-                                int col = bmp.getPixel(px, y + bit);
-                                int gray = (Color.red(col)*299 + Color.green(col)*587 + Color.blue(col)*114)/1000;
-                                if (gray < 180) v |= (1 << (7-k));
+                            int x = px + k;
+                            if (x < w) {
+                                int col = bmp.getPixel(x, py);
+                                int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
+                                if (gray < 180) {
+                                    v |= (1 << (7 - k));
+                                }
                             }
                         }
                     }
                     out.write(v);
                 }
             }
-            out.write(0x0A);
         }
+
+        out.write(new byte[]{0x1B, 0x61, 0x00});
         out.write(new byte[]{0x1B, 0x64, 0x03});
         return out.toByteArray();
     }
