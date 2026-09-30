@@ -191,7 +191,7 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 JSONObject o = new JSONObject(payload);
-                byte[] bytes = textToEscPos(o);
+                byte[] bytes = receiptToEscPos(o);
                 int copies = Math.max(1, Math.min(3, o.optInt("copies", 1)));
                 BluetoothAdapter a = adapter();
                 BluetoothDevice d = a.getRemoteDevice(mac);
@@ -327,6 +327,64 @@ public class MainActivity extends Activity {
         new Canvas(out).drawBitmap(b, 0, 0, null);
         b.recycle();
         return out;
+    }
+
+    private byte[] receiptToEscPos(JSONObject o) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Bitmap logo = decodeData(o.optString("logo", ""));
+        if (logo != null) {
+            out.write(logoToEscPos(logo));
+        }
+        out.write(textToEscPos(o));
+        return out.toByteArray();
+    }
+
+    private byte[] logoToEscPos(Bitmap source) throws Exception {
+        final int maxWidth = 280;
+        int srcW = source.getWidth();
+        int srcH = source.getHeight();
+        float scale = Math.min(1f, maxWidth / (float) srcW);
+        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
+        int h = Math.max(1, Math.round(srcH * scale));
+
+        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        // Centered 24-dot column bitmap. This is sent only for the logo;
+        // the receipt body remains the proven text-only ESC/POS path.
+        out.write(new byte[]{0x1B, 0x40});
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1B, 0x33, 24});
+
+        for (int y0 = 0; y0 < h; y0 += 24) {
+            int bandH = Math.min(24, h - y0);
+            out.write(new byte[]{
+                    0x1B, 0x2A, 33,
+                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)
+            });
+            for (int x = 0; x < w; x++) {
+                for (int plane = 0; plane < 3; plane++) {
+                    int v = 0;
+                    for (int bit = 0; bit < 8; bit++) {
+                        int yy = y0 + plane * 8 + bit;
+                        if (yy < y0 + bandH) {
+                            int col = bmp.getPixel(x, yy);
+                            int gray = (Color.red(col) * 299
+                                    + Color.green(col) * 587
+                                    + Color.blue(col) * 114) / 1000;
+                            if (gray < 180) v |= (1 << (7 - bit));
+                        }
+                    }
+                    out.write(v);
+                }
+            }
+            out.write(0x0A);
+        }
+        out.write(new byte[]{0x1B, 0x32});
+        out.write(new byte[]{0x1B, 0x61, 0x00});
+        out.write(new byte[]{0x0A});
+        bmp.recycle();
+        return out.toByteArray();
     }
 
     private byte[] textToEscPos(JSONObject o) throws Exception {
