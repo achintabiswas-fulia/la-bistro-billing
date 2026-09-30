@@ -8,6 +8,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.ClipData;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import androidx.core.content.FileProvider;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -30,6 +34,8 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Set;
@@ -142,6 +148,38 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    private boolean printViaFreePrintService(JSONObject o, Bitmap receipt) {
+        final String pkg = "com.thermalprinternative";
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
+        } catch (Exception e) {
+            return false;
+        }
+        try {
+            File file = new File(getCacheDir(), "la_bistro_receipt.png");
+            FileOutputStream fos = new FileOutputStream(file);
+            receipt.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.close();
+
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("image/png");
+            intent.setPackage(pkg);
+            intent.putExtra(Intent.EXTRA_STREAM, uri);
+            intent.putExtra(Intent.EXTRA_TEXT,
+                    "LA BISTRO\nNH 12 Fulia, Nadia\nPhone: 7811838548\nBill: " +
+                    o.optString("id", "") + "\nTotal: ₹" +
+                    String.format(java.util.Locale.US, "%.2f", o.optDouble("total", 0)));
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setClipData(ClipData.newRawUri("La Bistro receipt", uri));
+            startActivity(intent);
+            toast("Sending bill to ESCPOS printer...");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private void printWithSavedPrinter(String payload) {
         if (!hasBtPermission()) { requestBtPermission(payload); return; }
         String mac = prefs.getString("printer_mac", "");
@@ -154,6 +192,10 @@ public class MainActivity extends Activity {
             try {
                 JSONObject o = new JSONObject(payload);
                 Bitmap receipt = buildReceipt(o);
+                if (printViaFreePrintService(o, receipt)) {
+                    receipt.recycle();
+                    return;
+                }
                 byte[] bytes = bitmapToEscPos(receipt);
                 int copies = Math.max(1, Math.min(3, o.optInt("copies", 1)));
                 BluetoothAdapter a = adapter();
