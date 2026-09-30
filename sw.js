@@ -1,10 +1,10 @@
-const CACHE='la-bistro-billing-v65';
+const CACHE='la-bistro-billing-v66';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./lb-core.js','./lb-manager.js','./lb-cloud.js','./lb-menu.js','./lb-save-fix.js','./lb-layout.js','./lb-sync-fix.js','./lb-sales-history.js'];
 
 self.addEventListener('install',e=>
   e.waitUntil(
     caches.open(CACHE)
-      .then(c=>c.addAll(ASSETS.map(x=>x+'?v=75')))
+      .then(c=>c.addAll(ASSETS.map(x=>x+'?v=76')))
       .then(()=>self.skipWaiting())
   )
 );
