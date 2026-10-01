@@ -337,6 +337,42 @@ public class MainActivity extends Activity {
         return out.toByteArray();
     }
 
+    private byte[] bitmapToEscPos(Bitmap source, int maxWidth) throws Exception {
+        int srcW = source.getWidth();
+        int srcH = source.getHeight();
+        float scale = Math.min(1f, maxWidth / (float) srcW);
+        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
+        int h = Math.max(1, Math.round(srcH * scale));
+        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1B, 0x33, 24});
+        for (int y0 = 0; y0 < h; y0 += 24) {
+            int bandH = Math.min(24, h - y0);
+            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)});
+            for (int x = 0; x < w; x++) {
+                for (int plane = 0; plane < 3; plane++) {
+                    int v = 0;
+                    for (int bit = 0; bit < 8; bit++) {
+                        int yy = y0 + plane * 8 + bit;
+                        if (yy < y0 + bandH) {
+                            int col = bmp.getPixel(x, yy);
+                            int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
+                            if (gray < 180) v |= (1 << (7 - bit));
+                        }
+                    }
+                    out.write(v);
+                }
+            }
+            out.write(0x0A);
+        }
+        out.write(new byte[]{0x1B, 0x32});
+        out.write(new byte[]{0x1B, 0x61, 0x00});
+        out.write(new byte[]{0x0A});
+        bmp.recycle();
+        return out.toByteArray();
+    }
+
     private byte[] logoToEscPos(Bitmap source) throws Exception {
         final int maxWidth = 280;
         int srcW = source.getWidth();
@@ -425,6 +461,12 @@ public class MainActivity extends Activity {
         writeAscii(out, "Payment: " + ascii(o.optString("payment", "Cash")) + "\\n");
         String msg = ascii(o.optString("message", "").trim());
         if (!msg.isEmpty()) writeAscii(out, msg + "\\n");
+        Bitmap qr = decodeData(o.optString("qr", ""));
+        if (qr != null) {
+            out.write(bitmapToEscPos(qr, 220));
+            out.write(new byte[]{0x1B, 0x61, 0x01});
+            writeAscii(out, "Scan to pay / PAYMENT SCAN\\n");
+        }
         out.write(new byte[]{0x1B, 0x61, 0x01});
         writeAscii(out, "Thank you\\n--------------------------------\\n\\n\\n");
         out.write(new byte[]{0x1B, 0x64, 0x03});
