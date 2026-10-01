@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android&v=78");
+        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android&v=79");
     }
 
     private boolean hasBtPermission() {
