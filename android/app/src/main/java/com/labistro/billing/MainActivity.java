@@ -373,6 +373,47 @@ public class MainActivity extends Activity {
         return out.toByteArray();
     }
 
+    private byte[] qrToEscPos(Bitmap source) throws Exception {
+        final int maxWidth = 200;
+        int srcW = source.getWidth();
+        int srcH = source.getHeight();
+        float scale = Math.min(1f, maxWidth / (float) srcW);
+        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
+        int h = Math.max(1, Math.round(srcH * scale));
+
+        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(new byte[]{0x1B, 0x40});
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1B, 0x33, 24});
+
+        for (int y0 = 0; y0 < h; y0 += 24) {
+            int bandH = Math.min(24, h - y0);
+            out.write(new byte[]{0x1B, 0x2A, 33,
+                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)});
+            for (int x = 0; x < w; x++) {
+                for (int plane = 0; plane < 3; plane++) {
+                    int v = 0;
+                    for (int bit = 0; bit < 8; bit++) {
+                        int yy = y0 + plane * 8 + bit;
+                        if (yy < y0 + bandH) {
+                            int col = bmp.getPixel(x, yy);
+                            int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
+                            if (gray < 160) v |= (1 << (7 - bit));
+                        }
+                    }
+                    out.write(v);
+                }
+            }
+            out.write(0x0A);
+        }
+        out.write(new byte[]{0x1B, 0x32});
+        out.write(new byte[]{0x1B, 0x61, 0x00});
+        out.write(new byte[]{0x0A});
+        bmp.recycle();
+        return out.toByteArray();
+    }
+
     private byte[] logoToEscPos(Bitmap source) throws Exception {
         final int maxWidth = 280;
         int srcW = source.getWidth();
@@ -463,7 +504,9 @@ public class MainActivity extends Activity {
         if (!msg.isEmpty()) writeAscii(out, msg + "\\n");
         Bitmap qr = decodeData(o.optString("qr", ""));
         if (qr != null) {
-            out.write(bitmapToEscPos(qr, 220));
+            // QR is sent through the same proven ESC/POS bitmap path as the logo,
+            // but at a smaller width to keep Bluetooth printing fast and reliable.
+            out.write(qrToEscPos(qr));
             out.write(new byte[]{0x1B, 0x61, 0x01});
             writeAscii(out, "Scan to pay / PAYMENT SCAN\\n");
         }
