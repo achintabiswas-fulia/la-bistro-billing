@@ -267,7 +267,7 @@ function loadExtras(){
   }
   if(!document.querySelector('script[data-lb-sales-history]')){
     const s=document.createElement('script');
-    s.src='./lb-sales-history.js?v=1';
+    s.src='./lb-sales-history.js?v=2';
     s.dataset.lbSalesHistory='1';
     document.head.appendChild(s);
   }
