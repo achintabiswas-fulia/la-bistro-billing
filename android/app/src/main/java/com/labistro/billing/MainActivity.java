@@ -471,9 +471,41 @@ public class MainActivity extends Activity {\n    private static final String DE
             writeAscii(out, "Scan to pay / PAYMENT SCAN\\n");
         }
         out.write(new byte[]{0x1B, 0x61, 0x01});
-        writeAscii(out, "Thank you\\n--------------------------------\\n\\n\\n");
+        writeAscii(out, "Thank you\\n");
+        out.write(bengaliThankYouToEscPos());
+        writeAscii(out, "--------------------------------\\n\\n\\n");
         out.write(new byte[]{0x1B, 0x64, 0x03});
         return out.toByteArray();
+    }
+
+    private byte[] bengaliThankYouToEscPos() throws Exception {
+        String[] lines = new String[]{
+                "লা বিস্ট্রোতে (La Bistro)-এ খাবার খাওয়ার জন্য",
+                "আপনাকে ধন্যবাদ! আপনার উপস্থিতি আমাদের দিনটি",
+                "বিশেষ করে তুলেছে। আশা করি আপনার খাবার ভালো",
+                "লেগেছে এবং খুব শীঘ্রই আমরা আপনাকে আবার সেবা",
+                "দেওয়ার সুযোগ পাবো। আপনার দিনটি সুন্দর কাটুক! ❤"
+        };
+        int width = 384;
+        int lineHeight = 30;
+        int top = 8;
+        Bitmap bmp = Bitmap.createBitmap(width, top + lines.length * lineHeight + 8, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+        canvas.drawColor(Color.WHITE);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(22f);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float baseline = top - fm.ascent;
+        for (String line : lines) {
+            canvas.drawText(line, width / 2f, baseline, paint);
+            baseline += lineHeight;
+        }
+        byte[] data = bitmapToEscPos(bmp, width);
+        bmp.recycle();
+        return data;
     }
 
     private void writeAscii(ByteArrayOutputStream out, String s) throws Exception {
