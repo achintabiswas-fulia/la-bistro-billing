@@ -41,7 +41,8 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity {\n    private static final String DEFAULT_QR_DATA = "data:image/png;base64,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";
+
     private static final int BT_REQ = 9001;
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int PAPER_DOTS = 384;
@@ -373,47 +374,6 @@ public class MainActivity extends Activity {
         return out.toByteArray();
     }
 
-    private byte[] qrToEscPos(Bitmap source) throws Exception {
-        final int maxWidth = 200;
-        int srcW = source.getWidth();
-        int srcH = source.getHeight();
-        float scale = Math.min(1f, maxWidth / (float) srcW);
-        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
-        int h = Math.max(1, Math.round(srcH * scale));
-
-        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, false);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(new byte[]{0x1B, 0x40});
-        out.write(new byte[]{0x1B, 0x61, 0x01});
-        out.write(new byte[]{0x1B, 0x33, 24});
-
-        for (int y0 = 0; y0 < h; y0 += 24) {
-            int bandH = Math.min(24, h - y0);
-            out.write(new byte[]{0x1B, 0x2A, 33,
-                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)});
-            for (int x = 0; x < w; x++) {
-                for (int plane = 0; plane < 3; plane++) {
-                    int v = 0;
-                    for (int bit = 0; bit < 8; bit++) {
-                        int yy = y0 + plane * 8 + bit;
-                        if (yy < y0 + bandH) {
-                            int col = bmp.getPixel(x, yy);
-                            int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
-                            if (gray < 160) v |= (1 << (7 - bit));
-                        }
-                    }
-                    out.write(v);
-                }
-            }
-            out.write(0x0A);
-        }
-        out.write(new byte[]{0x1B, 0x32});
-        out.write(new byte[]{0x1B, 0x61, 0x00});
-        out.write(new byte[]{0x0A});
-        bmp.recycle();
-        return out.toByteArray();
-    }
-
     private byte[] logoToEscPos(Bitmap source) throws Exception {
         final int maxWidth = 280;
         int srcW = source.getWidth();
@@ -502,11 +462,11 @@ public class MainActivity extends Activity {
         writeAscii(out, "Payment: " + ascii(o.optString("payment", "Cash")) + "\\n");
         String msg = ascii(o.optString("message", "").trim());
         if (!msg.isEmpty()) writeAscii(out, msg + "\\n");
-        Bitmap qr = decodeData(o.optString("qr", ""));
+        String qrData = o.optString("qr", "");
+        if (qrData.isEmpty()) qrData = DEFAULT_QR_DATA;
+        Bitmap qr = decodeData(qrData);
         if (qr != null) {
-            // QR is sent through the same proven ESC/POS bitmap path as the logo,
-            // but at a smaller width to keep Bluetooth printing fast and reliable.
-            out.write(qrToEscPos(qr));
+            out.write(bitmapToEscPos(qr, 220));
             out.write(new byte[]{0x1B, 0x61, 0x01});
             writeAscii(out, "Scan to pay / PAYMENT SCAN\\n");
         }
