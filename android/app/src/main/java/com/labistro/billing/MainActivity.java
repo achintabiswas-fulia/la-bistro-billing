@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android&v=76");
+        web.loadUrl("https://achintabiswas-fulia.github.io/la-bistro-billing/?app=android&v=78");
     }
 
     private boolean hasBtPermission() {
@@ -232,12 +232,10 @@ public class MainActivity extends Activity {
                     while (pos < bytes.length) {
                         int n = Math.min(4096, bytes.length - pos);
                         out.write(bytes, pos, n);
-                        out.flush();
                         pos += n;
-                        try { Thread.sleep(8); } catch (InterruptedException ignored) {}
                     }
                 }
-                try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+                out.flush();
                 out.close();
                 socket.close();
                 final String name = prefs.getString("printer_name", "La Bistro Printer");
