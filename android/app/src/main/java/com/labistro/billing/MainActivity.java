@@ -374,60 +374,53 @@ public class MainActivity extends Activity {
     }
 
     private byte[] logoToEscPos(Bitmap source) throws Exception {
-        // Keep the exact La Bistro logo, but make it a true round logo for thermal printing.
-        // The phone UI may visually crop the source with CSS; the printer does not, so crop it here.
+        // Use the user's exact uploaded logo bitmap; only scale it for the 58mm printer.
+        // The circular shape is preserved and the white corners stay white.
         final int size = 180;
-        Bitmap round = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas rc = new Canvas(round);
+        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas rc = new Canvas(bmp);
         rc.drawColor(Color.WHITE);
-        Paint rp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        float scale = Math.min((size - 4f) / source.getWidth(), (size - 4f) / source.getHeight());
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        float scale = Math.min((size - 2f) / source.getWidth(), (size - 2f) / source.getHeight());
         float w = source.getWidth() * scale;
         float h = source.getHeight() * scale;
         float left = (size - w) / 2f;
         float top = (size - h) / 2f;
-        rc.save();
-        rc.clipPath(new android.graphics.Path() {{
-            addCircle(size / 2f, size / 2f, (size - 4f) / 2f, android.graphics.Path.Direction.CW);
-        }});
-        rc.drawBitmap(source, null, new RectF(left, top, left + w, top + h), rp);
-        rc.restore();
+        rc.drawBitmap(source, null, new RectF(left, top, left + w, top + h), p);
 
-        Bitmap bmp = round;
-        int wDots = bmp.getWidth();
-        int hDots = bmp.getHeight();
+        // ESC/POS GS v 0 raster image command. This is more reliable than ESC * on
+        // Bluetooth thermal printers and avoids the solid black rectangle problem.
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-
         out.write(new byte[]{0x1B, 0x40});
         out.write(new byte[]{0x1B, 0x61, 0x01});
-        out.write(new byte[]{0x1B, 0x33, 24});
 
-        for (int y0 = 0; y0 < hDots; y0 += 24) {
-            int bandH = Math.min(24, hDots - y0);
-            out.write(new byte[]{0x1B, 0x2A, 33,
-                    (byte)(wDots & 0xFF), (byte)((wDots >> 8) & 0xFF)});
-            for (int x = 0; x < wDots; x++) {
-                for (int plane = 0; plane < 3; plane++) {
-                    int v = 0;
-                    for (int bit = 0; bit < 8; bit++) {
-                        int yy = y0 + plane * 8 + bit;
-                        if (yy < y0 + bandH) {
-                            int col = bmp.getPixel(x, yy);
-                            int gray = (Color.red(col) * 299
-                                    + Color.green(col) * 587
-                                    + Color.blue(col) * 114) / 1000;
-                            if (gray < 180) v |= (1 << (7 - bit));
-                        }
+        int widthBytes = (bmp.getWidth() + 7) / 8;
+        int height = bmp.getHeight();
+        out.write(new byte[]{0x1D, 0x76, 0x30, 0x00,
+                (byte)(widthBytes & 0xFF), (byte)((widthBytes >> 8) & 0xFF),
+                (byte)(height & 0xFF), (byte)((height >> 8) & 0xFF)});
+
+        for (int y = 0; y < height; y++) {
+            for (int xb = 0; xb < widthBytes; xb++) {
+                int bits = 0;
+                for (int bit = 0; bit < 8; bit++) {
+                    int x = xb * 8 + bit;
+                    if (x < bmp.getWidth()) {
+                        int col = bmp.getPixel(x, y);
+                        int gray = (Color.red(col) * 299
+                                + Color.green(col) * 587
+                                + Color.blue(col) * 114) / 1000;
+                        if (gray < 180) bits |= (1 << (7 - bit));
                     }
-                    out.write(v);
                 }
+                out.write(bits);
             }
-            out.write(0x0A);
         }
+
         out.write(new byte[]{0x1B, 0x32});
         out.write(new byte[]{0x1B, 0x61, 0x00});
         out.write(new byte[]{0x0A});
-        round.recycle();
+        bmp.recycle();
         return out.toByteArray();
     }
 
