@@ -465,6 +465,7 @@ public class MainActivity extends Activity {\n    private static final String DE
         String qrData = o.optString("qr", "");
         if (qrData.isEmpty()) qrData = DEFAULT_QR_DATA;
         Bitmap qr = decodeData(qrData);
+        if (qr == null) qr = decodeData(DEFAULT_QR_DATA);
         if (qr != null) {
             out.write(bitmapToEscPos(qr, 220));
             out.write(new byte[]{0x1B, 0x61, 0x01});
