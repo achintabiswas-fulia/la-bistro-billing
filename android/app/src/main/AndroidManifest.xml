@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-    <application android:theme="@style/AppTheme" android:label="La Bistro Billing" android:usesCleartextTraffic="false" android:resizeableActivity="true">
+    <application android:icon="@drawable/la_bistro_icon" android:theme="@style/AppTheme" android:label="La Bistro Billing" android:usesCleartextTraffic="false" android:resizeableActivity="true">
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
