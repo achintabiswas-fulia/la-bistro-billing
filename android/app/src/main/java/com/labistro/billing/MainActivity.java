@@ -70,7 +70,7 @@ public class MainActivity extends Activity {\n    private static final String DE
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return false; }
             @Override public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                view.evaluateJavascript("(function(){window.__LB_NATIVE_ANDROID=true;window.__LB_NATIVE_PRINT=function(){try{if(window.LB&&window.LB.saveSale){window.LB.saveSale(true);return 'native-print-requested'}}catch(e){}return 'native-print-failed'};window.bluetoothPrinter=function(){try{if(window.AndroidPrinter&&typeof window.AndroidPrinter.setupPrinter==='function'){window.AndroidPrinter.setupPrinter();return}}catch(e){}alert('Bluetooth printer bridge is not available. Please reopen the La Bistro APK.')}})()", null);
+                view.evaluateJavascript("(function(){window.__LB_NATIVE_ANDROID=true;try{var i=document.querySelector('header .logo');if(i&&i.src&&i.src.indexOf('data:')===0&&!localStorage.getItem('laBistroLogo'))localStorage.setItem('laBistroLogo',i.src)}catch(e){}window.__LB_NATIVE_PRINT=function(){try{if(window.LB&&window.LB.saveSale){window.LB.saveSale(true);return 'native-print-requested'}}catch(e){}return 'native-print-failed'};window.bluetoothPrinter=function(){try{if(window.AndroidPrinter&&typeof window.AndroidPrinter.setupPrinter==='function'){window.AndroidPrinter.setupPrinter();return}}catch(e){}alert('Bluetooth printer bridge is not available. Please reopen the La Bistro APK.')}})()", null);
             }
         });
         setContentView(web);
