@@ -375,28 +375,49 @@ public class MainActivity extends Activity {\n    private static final String DE
     }
 
     private byte[] logoToEscPos(Bitmap source) throws Exception {
+        // Crop large white/empty margins from the stored header image so the
+        // actual La Bistro logo prints at the top without a large blank area.
+        int left = source.getWidth(), top = source.getHeight(), right = -1, bottom = -1;
+        for (int yy = 0; yy < source.getHeight(); yy += 2) {
+            for (int xx = 0; xx < source.getWidth(); xx += 2) {
+                int col = source.getPixel(xx, yy);
+                int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
+                if (gray < 245) {
+                    if (xx < left) left = xx;
+                    if (xx > right) right = xx;
+                    if (yy < top) top = yy;
+                    if (yy > bottom) bottom = yy;
+                }
+            }
+        }
+        Bitmap cropped = source;
+        if (right >= left && bottom >= top) {
+            int padX = Math.max(4, source.getWidth() / 80);
+            int padY = Math.max(4, source.getHeight() / 80);
+            left = Math.max(0, left - padX);
+            top = Math.max(0, top - padY);
+            right = Math.min(source.getWidth() - 1, right + padX);
+            bottom = Math.min(source.getHeight() - 1, bottom + padY);
+            cropped = Bitmap.createBitmap(source, left, top, right - left + 1, bottom - top + 1);
+        }
+
         final int maxWidth = 280;
-        int srcW = source.getWidth();
-        int srcH = source.getHeight();
+        int srcW = cropped.getWidth();
+        int srcH = cropped.getHeight();
         float scale = Math.min(1f, maxWidth / (float) srcW);
         int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
         int h = Math.max(1, Math.round(srcH * scale));
 
-        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, true);
+        Bitmap bmp = Bitmap.createScaledBitmap(cropped, w, h, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        // Centered 24-dot column bitmap. This is sent only for the logo;
-        // the receipt body remains the proven text-only ESC/POS path.
         out.write(new byte[]{0x1B, 0x40});
         out.write(new byte[]{0x1B, 0x61, 0x01});
         out.write(new byte[]{0x1B, 0x33, 24});
 
         for (int y0 = 0; y0 < h; y0 += 24) {
             int bandH = Math.min(24, h - y0);
-            out.write(new byte[]{
-                    0x1B, 0x2A, 33,
-                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)
-            });
+            out.write(new byte[]{0x1B, 0x2A, 33, (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)});
             for (int x = 0; x < w; x++) {
                 for (int plane = 0; plane < 3; plane++) {
                     int v = 0;
@@ -404,9 +425,7 @@ public class MainActivity extends Activity {\n    private static final String DE
                         int yy = y0 + plane * 8 + bit;
                         if (yy < y0 + bandH) {
                             int col = bmp.getPixel(x, yy);
-                            int gray = (Color.red(col) * 299
-                                    + Color.green(col) * 587
-                                    + Color.blue(col) * 114) / 1000;
+                            int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
                             if (gray < 180) v |= (1 << (7 - bit));
                         }
                     }
@@ -419,6 +438,7 @@ public class MainActivity extends Activity {\n    private static final String DE
         out.write(new byte[]{0x1B, 0x61, 0x00});
         out.write(new byte[]{0x0A});
         bmp.recycle();
+        if (cropped != source) cropped.recycle();
         return out.toByteArray();
     }
 
