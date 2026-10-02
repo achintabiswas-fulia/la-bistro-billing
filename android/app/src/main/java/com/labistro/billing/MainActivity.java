@@ -331,6 +331,10 @@ public class MainActivity extends Activity {
             out.write(logoToEscPos(logo));
         }
         out.write(textToEscPos(o));
+        Bitmap qr = decodeData(o.optString("qr", ""));
+        if (qr != null) {
+            out.write(logoToEscPos(qr));
+        }
         return out.toByteArray();
     }
 
