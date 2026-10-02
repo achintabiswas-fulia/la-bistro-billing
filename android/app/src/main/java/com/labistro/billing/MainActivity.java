@@ -374,29 +374,39 @@ public class MainActivity extends Activity {
     }
 
     private byte[] logoToEscPos(Bitmap source) throws Exception {
-        final int maxWidth = 280;
-        int srcW = source.getWidth();
-        int srcH = source.getHeight();
-        float scale = Math.min(1f, maxWidth / (float) srcW);
-        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
-        int h = Math.max(1, Math.round(srcH * scale));
+        // Keep the exact La Bistro logo, but make it a true round logo for thermal printing.
+        // The phone UI may visually crop the source with CSS; the printer does not, so crop it here.
+        final int size = 180;
+        Bitmap round = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas rc = new Canvas(round);
+        rc.drawColor(Color.WHITE);
+        Paint rp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        float scale = Math.min((size - 4f) / source.getWidth(), (size - 4f) / source.getHeight());
+        float w = source.getWidth() * scale;
+        float h = source.getHeight() * scale;
+        float left = (size - w) / 2f;
+        float top = (size - h) / 2f;
+        rc.save();
+        rc.clipPath(new android.graphics.Path() {{
+            addCircle(size / 2f, size / 2f, (size - 4f) / 2f, android.graphics.Path.Direction.CW);
+        }});
+        rc.drawBitmap(source, null, new RectF(left, top, left + w, top + h), rp);
+        rc.restore();
 
-        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, true);
+        Bitmap bmp = round;
+        int wDots = bmp.getWidth();
+        int hDots = bmp.getHeight();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        // Centered 24-dot column bitmap. This is sent only for the logo;
-        // the receipt body remains the proven text-only ESC/POS path.
         out.write(new byte[]{0x1B, 0x40});
         out.write(new byte[]{0x1B, 0x61, 0x01});
         out.write(new byte[]{0x1B, 0x33, 24});
 
-        for (int y0 = 0; y0 < h; y0 += 24) {
-            int bandH = Math.min(24, h - y0);
-            out.write(new byte[]{
-                    0x1B, 0x2A, 33,
-                    (byte)(w & 0xFF), (byte)((w >> 8) & 0xFF)
-            });
-            for (int x = 0; x < w; x++) {
+        for (int y0 = 0; y0 < hDots; y0 += 24) {
+            int bandH = Math.min(24, hDots - y0);
+            out.write(new byte[]{0x1B, 0x2A, 33,
+                    (byte)(wDots & 0xFF), (byte)((wDots >> 8) & 0xFF)});
+            for (int x = 0; x < wDots; x++) {
                 for (int plane = 0; plane < 3; plane++) {
                     int v = 0;
                     for (int bit = 0; bit < 8; bit++) {
@@ -417,7 +427,7 @@ public class MainActivity extends Activity {
         out.write(new byte[]{0x1B, 0x32});
         out.write(new byte[]{0x1B, 0x61, 0x00});
         out.write(new byte[]{0x0A});
-        bmp.recycle();
+        round.recycle();
         return out.toByteArray();
     }
 
