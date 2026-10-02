@@ -48,6 +48,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private SharedPreferences prefs;
     private String pendingPrint = null;
+    private BluetoothSocket printerSocket = null;
+    private OutputStream printerOut = null;
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -196,50 +198,43 @@ public class MainActivity extends Activity {
                 BluetoothAdapter a = adapter();
                 BluetoothDevice d = a.getRemoteDevice(mac);
                 if (a.isDiscovering()) a.cancelDiscovery();
-                BluetoothSocket socket = null;
-                Exception last = null;
-                try {
-                    socket = d.createRfcommSocketToServiceRecord(SPP_UUID);
-                    socket.connect();
-                } catch (Exception first) {
-                    last = first;
+                // Reuse the Bluetooth connection so subsequent bills print immediately.
+                BluetoothSocket socket = printerSocket;
+                OutputStream out = printerOut;
+                if (socket == null || !socket.isConnected() || out == null) {
+                    Exception last = null;
                     try {
-                        if (socket != null) socket.close();
-                    } catch (Exception ignored) {}
-                    try {
-                        socket = d.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
+                        socket = d.createRfcommSocketToServiceRecord(SPP_UUID);
                         socket.connect();
-                    } catch (Exception second) {
-                        last = second;
+                    } catch (Exception first) {
+                        last = first;
+                        try { if (socket != null) socket.close(); } catch (Exception ignored) {}
                         try {
-                            if (socket != null) socket.close();
-                        } catch (Exception ignored) {}
-                        try {
-                            java.lang.reflect.Method m = d.getClass().getMethod("createRfcommSocket", int.class);
-                            socket = (BluetoothSocket)m.invoke(d, 1);
+                            socket = d.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
                             socket.connect();
-                        } catch (Exception third) {
-                            last = third;
+                        } catch (Exception second) {
+                            last = second;
+                            try { if (socket != null) socket.close(); } catch (Exception ignored) {}
+                            try {
+                                java.lang.reflect.Method m = d.getClass().getMethod("createRfcommSocket", int.class);
+                                socket = (BluetoothSocket)m.invoke(d, 1);
+                                socket.connect();
+                            } catch (Exception third) {
+                                last = third;
+                            }
                         }
                     }
-                }
-                if (socket == null || !socket.isConnected()) {
-                    throw new Exception("Bluetooth printer connection failed", last);
-                }
-                OutputStream out = socket.getOutputStream();
-                for (int copy = 0; copy < copies; copy++) {
-                    int pos = 0;
-                    while (pos < bytes.length) {
-                        int n = Math.min(4096, bytes.length - pos);
-                        out.write(bytes, pos, n);
-                        out.flush();
-                        pos += n;
-                        try { Thread.sleep(8); } catch (InterruptedException ignored) {}
+                    if (socket == null || !socket.isConnected()) {
+                        throw new Exception("Bluetooth printer connection failed", last);
                     }
+                    out = socket.getOutputStream();
+                    printerSocket = socket;
+                    printerOut = out;
                 }
-                try { Thread.sleep(250); } catch (InterruptedException ignored) {}
-                out.close();
-                socket.close();
+                for (int copy = 0; copy < copies; copy++) {
+                    out.write(bytes);
+                }
+                out.flush();
                 final String name = prefs.getString("printer_name", "La Bistro Printer");
                 runOnUiThread(() -> toast("Printed on " + name));
             } catch (Exception e) {
