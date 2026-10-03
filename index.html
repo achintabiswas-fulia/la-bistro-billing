@@ -190,7 +190,7 @@ function saveBillQr(event){const f=event.target.files&&event.target.files[0];if(
 function loadBillQr(){try{const d=localStorage.getItem('laBistroBillQr');const p=document.getElementById('billQrPreview');if(d&&p){p.src=d;p.style.display='block'}}catch(e){}}
 loadBillQr();renderTabs();renderMenu();renderCart();
 </script>
-<script src="lb-core.js?v=77"></script>
+<script src="qrcode-generator.js?v=1"></script>\n<script src="lb-core.js?v=78"></script>
 <script src="lb-manager.js?v=2"></script>
 <script src="lb-sales-history.js?v=5-direct" data-lb-sales-history></script>
 <script src="lb-cloud.js"></script>
