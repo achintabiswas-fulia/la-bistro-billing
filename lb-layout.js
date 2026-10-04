@@ -188,6 +188,64 @@ function renderCategories(){
   menu.scrollTop=oldMenuTop;
 }
 
+function injectCustomItemsIntoBaseCategory(){
+  const menu=document.getElementById('menuPanel');
+  if(!menu)return;
+  const items=customItems();
+  if(!items.length)return;
+
+  const baseTitles=Array.from(menu.querySelectorAll('.category-title'));
+  baseTitles.forEach(title=>{
+    const baseName=String(title.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');
+    const grid=title.nextElementSibling;
+    if(!grid||!grid.classList.contains('grid'))return;
+
+    const group=items.filter(x=>{
+      const cat=String(x.category||'').trim().toLowerCase().replace(/\s+/g,' ');
+      return cat===baseName;
+    });
+    if(!group.length)return;
+
+    grid.querySelectorAll('.lbBaseCustomItem').forEach(x=>x.remove());
+
+    group.forEach(x=>{
+      const card=document.createElement('div');
+      card.className='item lbCustomItem lbBaseCustomItem';
+      if(x.image){
+        const img=document.createElement('img');
+        img.className='lbCustomImg';
+        img.src=x.image;
+        img.alt='';
+        card.appendChild(img);
+      }
+      const en=document.createElement('div');en.className='en';en.textContent=x.en||'';
+      const bn=document.createElement('div');bn.className='bn';bn.textContent=x.bn||'';
+      const price=document.createElement('div');price.className='price';price.textContent='₹'+Number(x.price||0).toFixed(0);
+
+      const controls=document.createElement('span');
+      controls.className='lbCustomQtyControls';
+      const minus=document.createElement('span');minus.className='lbCustomMinus';minus.textContent='−';
+      const count=document.createElement('b');count.className='lbCustomCount';
+      const plus=document.createElement('span');plus.className='lbCustomPlus';plus.textContent='+';
+      controls.append(minus,count,plus);
+
+      const customKey=()=>String((x.en||'')+'||'+(x.bn||'')+'||'+Number(x.price||0));
+      const getQty=()=>Number(window.__freshCart?.[customKey()]?.qty||0);
+      const setQty=q=>{
+        q=Math.max(0,Math.floor(Number(q)||0));
+        window.lbFreshCustomSetQty?.(x.en||'',x.bn||'',Number(x.price||0),q);
+        count.textContent=getQty();
+      };
+      count.textContent=getQty();
+      minus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()-1)};
+      plus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()+1)};
+      controls.onclick=e=>{e.preventDefault();e.stopPropagation()};
+      card.append(controls,en,bn,price);
+      grid.appendChild(card);
+    });
+  });
+}
+
 function patchCanonicalRenderMenu(){
   if(window.__lbCleanRenderMenuPatched)return;
   if(typeof window.renderMenu!=='function')return;
@@ -292,6 +350,7 @@ function apply(){
   window.renderCustomCategories=renderCategories;
 
   renderCategories();
+  injectCustomItemsIntoBaseCategory();
 }
 
 if(document.readyState==='loading'){
@@ -306,6 +365,7 @@ window.addEventListener('load',()=>{
     patchCanonicalRenderMenu();
     patchCanonicalRenderTabs();
     renderCategories();
+    injectCustomItemsIntoBaseCategory();
     loadExtras();
   },300);
 });
