@@ -336,11 +336,11 @@ public class MainActivity extends Activity {
            Remove that final cut temporarily so the QR can be printed
            at the bottom, then send the cut only after the QR. */
         byte[] body = textToEscPos(o);
-        if (body.length >= 4
-                && (body[body.length - 4] & 0xFF) == 0x1B
-                && (body[body.length - 3] & 0xFF) == 0x64
-                && (body[body.length - 2] & 0xFF) == 0x03) {
-            out.write(body, 0, body.length - 4);
+        if (body.length >= 3
+                && (body[body.length - 3] & 0xFF) == 0x1B
+                && (body[body.length - 2] & 0xFF) == 0x64
+                && (body[body.length - 1] & 0xFF) == 0x03) {
+            out.write(body, 0, body.length - 3);
         } else {
             out.write(body);
         }
