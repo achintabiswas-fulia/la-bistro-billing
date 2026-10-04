@@ -12,10 +12,19 @@ function customItems(){
 }
 
 function customCategories(){
-  const out=[],add=v=>{
+  const out=[],base=[];
+  const norm=v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const addBase=v=>{v=String(v||'').trim();if(v&&!base.includes(norm(v)))base.push(norm(v))};
+  const add=v=>{
     v=String(v||'').trim();
-    if(v&&!out.includes(v))out.push(v);
+    /* Never add a saved custom category if it is already one of the locked
+       base MENU categories. This prevents old saved category names from
+       appearing again after Extra/Cigarette/Cold Drink/My Items. */
+    if(v&&!out.includes(v)&&!base.includes(norm(v)))out.push(v);
   };
+  try{
+    if(typeof MENU!=='undefined'&&Array.isArray(MENU))MENU.forEach(c=>addBase(c&&c[0]));
+  }catch(e){}
   customItems().forEach(x=>add(x.category||'MY ITEMS / আমার আইটেম'));
   try{JSON.parse(localStorage.getItem('lb_categories_v1')||'[]').forEach(add)}catch(e){}
   return out;
