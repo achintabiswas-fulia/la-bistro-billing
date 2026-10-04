@@ -67,12 +67,21 @@ function renderCategories(){
      ICE CREAM / আইসক্রিম) must appear inside that original category.
      They are not separate custom tabs. */
   const baseNorm=v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const baseKey=v=>baseNorm(String(v||'').split('/')[0]).replace(/[^a-z0-9\u0980-\u09ff]/g,'');
   const customBaseGroups={};
   items.forEach(x=>{
     const cat=String(x.category||'').trim();
-    let base=null;try{const baseMenu=Array.isArray(MENU)?MENU:[];base=baseMenu.find(c=>baseNorm(c&&c[0])===baseNorm(cat)||baseNorm(String(c&&c[0]).split('/')[0])===baseNorm(cat.split('/')[0]))}catch(e){}
+    let base=null;
+    try{
+      const baseMenu=Array.isArray(MENU)?MENU:[];
+      base=baseMenu.find(c=>{
+        const title=String(c&&c[0]||'');
+        return baseNorm(title)===baseNorm(cat) ||
+               baseKey(title)===baseKey(cat);
+      });
+    }catch(e){}
     if(base){
-      const key=baseNorm(base[0]);
+      const key=baseKey(base[0]);
       (customBaseGroups[key]||(customBaseGroups[key]=[])).push(x);
     }
   });
@@ -85,7 +94,7 @@ function renderCategories(){
       if(!base)return;
       const grid=title.nextElementSibling;
       if(!grid||!grid.classList.contains('grid'))return;
-      const group=customBaseGroups[baseNorm(base[0])]||[];
+      const group=customBaseGroups[baseKey(base[0])]||[];
       group.forEach(x=>{
         if(grid.querySelector('[data-lb-custom-id="'+CSS.escape(String(x.id))+'"]'))return;
         const card=document.createElement('div');
