@@ -66,7 +66,7 @@ function renderCategories(){
   /* Custom items assigned to an existing locked category (for example
      ICE CREAM / আইসক্রিম) must appear inside that original category.
      They are not separate custom tabs. */
-  const baseNorm=v=>String(v||'').trim().toLowerCase().replace(/\\s+/g,' ');
+  const baseNorm=v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
   const customBaseGroups={};
   items.forEach(x=>{
     const cat=String(x.category||'').trim();
