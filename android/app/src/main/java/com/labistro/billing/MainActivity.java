@@ -330,11 +330,27 @@ public class MainActivity extends Activity {
         if (logo != null) {
             out.write(logoToEscPos(logo));
         }
-        out.write(textToEscPos(o));
+
+        /* Keep the locked receipt formula exactly as-is.
+           The text printer routine ends with the paper-cut command.
+           Remove that final cut temporarily so the QR can be printed
+           at the bottom, then send the cut only after the QR. */
+        byte[] body = textToEscPos(o);
+        if (body.length >= 4
+                && (body[body.length - 4] & 0xFF) == 0x1B
+                && (body[body.length - 3] & 0xFF) == 0x64
+                && (body[body.length - 2] & 0xFF) == 0x03) {
+            out.write(body, 0, body.length - 4);
+        } else {
+            out.write(body);
+        }
+
         Bitmap qr = decodeData(o.optString("qr", ""));
         if (qr != null) {
             out.write(logoToEscPos(qr));
         }
+
+        out.write(new byte[]{0x1B, 0x64, 0x03});
         return out.toByteArray();
     }
 
