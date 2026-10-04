@@ -63,7 +63,69 @@ function renderCategories(){
       .map(x=>[x.id,x.en,x.bn,x.price,x.image||''])
   ])]);
 
-  if(host.dataset.signature===signature && host.children.length===cats.length)return;
+  /* Custom items assigned to an existing locked category (for example
+     ICE CREAM / আইসক্রিম) must appear inside that original category.
+     They are not separate custom tabs. */
+  const baseNorm=v=>String(v||'').trim().toLowerCase().replace(/\\s+/g,' ');
+  const customBaseGroups={};
+  items.forEach(x=>{
+    const cat=String(x.category||'').trim();
+    const base=Array.isArray(window.MENU)?window.MENU.find(c=>baseNorm(c&&c[0])===baseNorm(cat)||baseNorm(String(c&&c[0]).split('/')[0])===baseNorm(cat.split('/')[0])):null;
+    if(base){
+      const key=baseNorm(base[0]);
+      (customBaseGroups[key]||(customBaseGroups[key]=[])).push(x);
+    }
+  });
+
+  function appendCustomBaseItems(){
+    if(!Array.isArray(window.MENU))return;
+    const titles=Array.from(menu.querySelectorAll('.category-title'));
+    titles.forEach(title=>{
+      const base=window.MENU.find(c=>String(c&&c[0]).trim()===String(title.textContent||'').trim());
+      if(!base)return;
+      const grid=title.nextElementSibling;
+      if(!grid||!grid.classList.contains('grid'))return;
+      const group=customBaseGroups[baseNorm(base[0])]||[];
+      group.forEach(x=>{
+        if(grid.querySelector('[data-lb-custom-id="'+CSS.escape(String(x.id))+'"]'))return;
+        const card=document.createElement('div');
+        card.className='item lbCustomItem';
+        card.dataset.lbCustomId=String(x.id);
+        const en=document.createElement('div');en.className='en';en.textContent=x.en||'';
+        const bn=document.createElement('div');bn.className='bn';bn.textContent=x.bn||'';
+        const price=document.createElement('div');price.className='price';price.textContent='₹'+Number(x.price||0).toFixed(0);
+        const controls=document.createElement('span');controls.className='lbCustomQtyControls';
+        const minus=document.createElement('span');minus.className='lbCustomMinus';minus.textContent='−';
+        const count=document.createElement('b');count.className='lbCustomCount';
+        const plus=document.createElement('span');plus.className='lbCustomPlus';plus.textContent='+';
+        controls.append(minus,count,plus);
+        const customKey=()=>String((x.en||'')+'||'+(x.bn||'')+'||'+Number(x.price||0));
+        const getQty=()=>Number(window.__freshCart?.[customKey()]?.qty||0);
+        const setQty=q=>{
+          q=Math.max(0,Math.floor(Number(q)||0));
+          const enV=String(x.en||''),bnV=String(x.bn||''),priceV=Number(x.price||0);
+          window.lbFreshCustomSetQty?.(enV,bnV,priceV,q);
+          if(window.cart&&typeof window.renderCart==='function'){
+            const legacyKey=enV+'|'+bnV+'|'+priceV;
+            if(q>0)window.cart[legacyKey]={item:[enV,bnV,priceV],qty:q};else delete window.cart[legacyKey];
+            window.renderCart();
+          }
+          count.textContent=getQty();
+        };
+        count.textContent=getQty();
+        minus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()-1)};
+        plus.onclick=e=>{e.preventDefault();e.stopPropagation();setQty(getQty()+1)};
+        controls.onclick=e=>{e.preventDefault();e.stopPropagation()};
+        card.append(controls,en,bn,price);
+        grid.appendChild(card);
+      });
+    });
+  }
+
+  if(host.dataset.signature===signature && host.children.length===cats.length){
+    appendCustomBaseItems();
+    return;
+  }
 
   const oldMenuTop=menu.scrollTop;
   host.dataset.signature=signature;
@@ -167,6 +229,7 @@ function renderCategories(){
   });
 
   host.appendChild(frag);
+  appendCustomBaseItems();
 
   /* IMPORTANT:
      Always append custom category tabs AFTER all locked base tabs.
