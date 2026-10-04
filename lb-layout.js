@@ -70,7 +70,7 @@ function renderCategories(){
   const customBaseGroups={};
   items.forEach(x=>{
     const cat=String(x.category||'').trim();
-    const base=Array.isArray(window.MENU)?window.MENU.find(c=>baseNorm(c&&c[0])===baseNorm(cat)||baseNorm(String(c&&c[0]).split('/')[0])===baseNorm(cat.split('/')[0])):null;
+    let base=null;try{const baseMenu=Array.isArray(MENU)?MENU:[];base=baseMenu.find(c=>baseNorm(c&&c[0])===baseNorm(cat)||baseNorm(String(c&&c[0]).split('/')[0])===baseNorm(cat.split('/')[0]))}catch(e){}
     if(base){
       const key=baseNorm(base[0]);
       (customBaseGroups[key]||(customBaseGroups[key]=[])).push(x);
@@ -78,10 +78,10 @@ function renderCategories(){
   });
 
   function appendCustomBaseItems(){
-    if(!Array.isArray(window.MENU))return;
+    let baseMenu=[];try{baseMenu=Array.isArray(MENU)?MENU:[]}catch(e){return}
     const titles=Array.from(menu.querySelectorAll('.category-title'));
     titles.forEach(title=>{
-      const base=window.MENU.find(c=>String(c&&c[0]).trim()===String(title.textContent||'').trim());
+      const base=baseMenu.find(c=>String(c&&c[0]).trim()===String(title.textContent||'').trim());
       if(!base)return;
       const grid=title.nextElementSibling;
       if(!grid||!grid.classList.contains('grid'))return;
