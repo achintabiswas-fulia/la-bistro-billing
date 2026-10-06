@@ -347,10 +347,44 @@ public class MainActivity extends Activity {
 
         Bitmap qr = decodeData(o.optString("qr", ""));
         if (qr != null) {
-            out.write(logoToEscPos(qr));
+            out.write(qrToEscPos(qr));
         }
 
         out.write(new byte[]{0x1B, 0x64, 0x03});
+        return out.toByteArray();
+    }
+
+    // QR-only ESC/POS raster printing. Keeps the locked receipt body unchanged.
+    private byte[] qrToEscPos(Bitmap source) throws Exception {
+        final int maxWidth = 220;
+        int srcW = source.getWidth(), srcH = source.getHeight();
+        float scale = Math.min(1f, maxWidth / (float) srcW);
+        int w = Math.max(8, Math.min(maxWidth, Math.round(srcW * scale)));
+        int h = Math.max(1, Math.round(srcH * scale));
+        Bitmap bmp = Bitmap.createScaledBitmap(source, w, h, true);
+        int widthBytes = (w + 7) / 8;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(new byte[]{0x1B, 0x61, 0x01});
+        out.write(new byte[]{0x1D, 0x76, 0x30, 0x00,
+                (byte)(widthBytes & 0xFF), (byte)((widthBytes >> 8) & 0xFF),
+                (byte)(h & 0xFF), (byte)((h >> 8) & 0xFF)});
+        for (int y = 0; y < h; y++) {
+            for (int xb = 0; xb < widthBytes; xb++) {
+                int v = 0;
+                for (int bit = 0; bit < 8; bit++) {
+                    int x = xb * 8 + bit;
+                    if (x < w) {
+                        int col = bmp.getPixel(x, y);
+                        int gray = (Color.red(col) * 299 + Color.green(col) * 587 + Color.blue(col) * 114) / 1000;
+                        if (gray < 180) v |= (1 << (7 - bit));
+                    }
+                }
+                out.write(v);
+            }
+        }
+        out.write(0x0A);
+        out.write(new byte[]{0x1B, 0x61, 0x00});
+        bmp.recycle();
         return out.toByteArray();
     }
 
