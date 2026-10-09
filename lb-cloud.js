@@ -18,8 +18,8 @@ const pushNow=async()=>{if(!B){lastSyncError='Billing module is not ready';retur
 const syncNow=async()=>{if(!B){lastSyncError='Billing module is not ready';return false}lastSyncError='';const pulled=await pullNow();if(!pulled)return false;const pushed=await pushNow();lastSyncAt=Date.now();lastSyncOk=pushed;if(!pushed&& !lastSyncError)lastSyncError='Cloud save failed';return pushed};
 const schedulePush=()=>{clearTimeout(pushTimer);pushTimer=setTimeout(syncNow,500)};
 let lastSyncAt=null,lastSyncOk=null,lastSyncError='';
-window.renderLBCloud=()=>{
-  const box=document.getElementById('lbContent');
+window.renderLBCloud=(target)=>{
+  const box=target||document.getElementById('lbContent');
   if(!box)return;
   const status=lastSyncOk===true?'Connected / সংযুক্ত':lastSyncOk===false?'Sync failed / সিঙ্ক ব্যর্থ':'Checking connection / সংযোগ পরীক্ষা হচ্ছে';
   const stamp=lastSyncAt?new Date(lastSyncAt).toLocaleString('en-IN'):'Not checked yet / এখনও পরীক্ষা হয়নি';
